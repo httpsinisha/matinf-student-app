@@ -1,8 +1,10 @@
 # MATINF-inspired WordPress and Android information system
 
-Status: agreed interview specification and implementation checklist; implementation has not started under this plan.
+Status: implementation underway. The local onboarding and first WordPress content/API/theme milestone are implemented; public hosting, native push, mobile reader integration, and final-device acceptance remain open. See `docs/setup-status.md` and `wordpress/README.md` for evidence and commands.
 
 Prepared: 18 September 2026. The user has approximately 20 days available; the exact submission date and daily working hours are not confirmed.
+
+Update, 23 September 2026: the user confirmed there is plenty of time, so the earlier twenty-day allocation below is historical guidance, not a deadline. Keep the name MATINF. Use the currently connected Android emulator throughout development and defer Redmi verification to the end. The user has no hosting, Expo, or Firebase accounts yet and chose a free public host. HelioHost Johnny is a candidate, pending signup and real API/outbound-network tests.
 
 This document is the handoff for implementing the project step by step. Preserve confirmed decisions. Items labeled **ASSUMPTION**, **proposed default**, or **open** are not additional requirements approved during the interview. Validate feasibility early and record any subsequent decisions here.
 
@@ -23,7 +25,7 @@ The Android APK is the most important final deliverable. Prefer a complete, stab
 | Constraint | Agreed requirement |
 | --- | --- |
 | Purpose | Academic demonstration; not an official university service |
-| Schedule | Approximately 20 days |
+| Schedule | No tight deadline; the earlier twenty-day schedule is historical guidance |
 | Experience | Beginner; architecture and documentation must be understandable |
 | Budget | Strictly EUR 0; no paid fallback, billing activation, or payment-card requirement |
 | Final device | Xiaomi Redmi Note 8 Pro; Android 11 / API 30 compatibility required |
@@ -43,7 +45,7 @@ The user has no ongoing service-maintenance commitment after assessment. A real 
 - Responsive WordPress site with header, identity/logo, navigation, main content, and footer.
 - Home, News, Announcements, Studies, Courses, Staff, Documents, and Contact content.
 - Individual news, announcement, program, course, and staff detail pages/screens.
-- Public reading without registration; one authenticated WordPress administrator.
+- Public reading without registration; WordPress Administrator and Professor accounts. Administrators create Professor accounts; Professors publish/edit their own posts without site-wide administration privileges.
 - WordPress-based content editing, images, document links, and relevant academic relationships.
 - API-backed mobile screens, not a whole-site WebView wrapper.
 - Optional first-launch notification subscription setup and later settings.
@@ -58,7 +60,7 @@ The user has no ongoing service-maintenance commitment after assessment. A real 
 ### Explicitly outside committed v1
 
 - Student accounts, cross-device preference synchronization, private content, personalized student records, grades, or enrollment transactions.
-- Multiple content-editor roles or editorial approval workflows.
+- Editorial approval workflows beyond the Administrator/Professor roles now requested by the user.
 - Search, advanced browsing filters, favorites, and dark mode.
 - In-app PDF reader, managed document downloads, and a downloadable offline library.
 - Arbitrary page-builder layouts, embedded widgets, and full desktop-layout reproduction in the app.
@@ -124,16 +126,17 @@ These are implementation defaults, not a finalized database schema. Record final
 
 ### Mobile navigation
 
-Use four bottom tabs:
+Use five bottom tabs (updated to the user's expanded app request):
 
 | Tab | Responsibility |
 | --- | --- |
 | Početna | Announcements first, recent news, and shortcuts to important sections |
-| Obavještenja | Announcement list and detail navigation |
-| Studije | Study levels, programs, years/course listings, and course details |
-| Više | Staff, Documents, Contact, notification settings, and demo/about information |
+| Notifikacije | Personal feed of matching news/announcements, all-post view, and preference editing |
+| Predmeti | Program/year filters, course details, staff, and material links |
+| Osoblje | Teaching staff profiles, public email, and linked courses |
+| Više | Studies/programs, News, Documents, Contact, notification settings, and demo/about information |
 
-News is reachable from Home. Staff is reachable through More and linked course profiles. Relevant links connect related content without requiring users to return to Home.
+News and Studies are reachable from Home and More. Staff has its own tab and is linked from course profiles. Relevant links connect related content without requiring users to return to Home.
 
 Mobile navigation is fixed in code. WordPress manages content within supported sections; changing website menu labels/order does not automatically restructure mobile navigation. Adding a new screen type may require an APK update.
 
@@ -150,7 +153,7 @@ Mobile navigation is fixed in code. WordPress manages content within supported s
 
 ### Administrator publication
 
-1. Sign into WordPress as the administrator.
+1. Sign into WordPress as an Administrator or Professor. The account's assigned role determines permissions; users cannot grant themselves a role at login.
 2. Create a news item or announcement with supported content and optional attachments.
 3. Select its relevant program-year/course audiences, or explicitly select Everyone for a general notice.
 4. Optionally check the notification control, unchecked by default.
@@ -222,7 +225,7 @@ Expo SDK 57 documentation states that Android remote push is unavailable in Expo
 - Public read access to published pages, news, announcements, programs, courses, staff, media/document links, and required academic metadata.
 - Pagination for lists and stable identifiers for details/relationships.
 - Installation registration and preference updates through dedicated validated endpoints.
-- Administrator-only content changes and notification actions.
+- Administrator content management and Professor-owned news/announcement editing. Notification service administration remains Administrator-only.
 - Consistent mobile handling of empty results, unavailable content, invalid requests, and server/network errors.
 - Build a short API contract with example responses before mobile screen implementation. Exact routes and field names remain to be defined during that step.
 
@@ -269,10 +272,10 @@ Day ranges are a **proposed working allocation**, not a confirmed daily-hour com
 
 ### Stage 0 — Workspace and version review (day 1)
 
-- [ ] Read applicable workspace instructions and exact SDK 57 documentation.
-- [ ] Inspect both Expo projects and identify the canonical app without discarding existing work.
-- [ ] Establish a project-local source-control boundary. Initial inspection suggests `git status` may be inheriting a repository above this workspace; do not stage personal directories.
-- [ ] Check installed Android/JDK/Node/build tooling and record versions.
+- [x] Read applicable workspace instructions and exact SDK 57 documentation.
+- [x] Inspect both Expo projects and identify the canonical app without discarding existing work. Root is canonical; nested starter preserved.
+- [x] Establish a project-local source-control boundary. `git rev-parse --show-toplevel` confirms this project directory.
+- [x] Check installed Android/JDK/Node/build tooling and record versions in `docs/setup-status.md`.
 - [ ] Confirm account ownership, app/package identity, and a credential-storage approach.
 - [ ] Record exact submission date if supplied and agree a workable daily pace.
 
@@ -282,9 +285,10 @@ Exit: one understood workspace and a version/account checklist; no accidental ch
 
 - [ ] Verify a strictly free host with PHP/database support, HTTPS, custom plugins, uploads, public REST access from the app, and outbound HTTPS for Expo requests.
 - [ ] Check signup requirements, quotas, sleeping/suspension behavior, API restrictions, and backup/export access using current provider documentation and real requests.
-- [ ] Set up local WordPress and a minimal hosted test site.
-- [ ] Produce an installable APK through a verified free build path.
-- [ ] Run it on the Redmi/API 30 and the API 36 emulator.
+- [x] Set up persistent local WordPress with the MATINF plugin/theme and separate integration-test database.
+- [ ] Set up a minimal hosted test site and verify it from the Android device.
+- [x] Produce an installable emulator preview APK through the local free build path; final ARM/signing delivery remains pending.
+- [x] Run the preview on the API 36 emulator without Metro port forwarding; Redmi/API 30 verification is deferred to final acceptance by the user's updated instruction.
 - [ ] Configure Expo/Firebase and demonstrate one remote push opening a test detail route.
 - [ ] Record any unresolved host/build/notification blocker before broader UI work.
 
@@ -294,7 +298,7 @@ Exit: public API request, real-phone installation, and remote notification are p
 
 - [ ] Implement the agreed content entities and academic relations in the focused plugin.
 - [ ] Define/validate program-years, courses, staff links, audiences, and media references.
-- [ ] Create all six program pages and representative sample content.
+- [x] Create all six program pages and representative sample content locally.
 - [ ] Add basic public endpoints/REST exposure and private installation/subscription endpoints.
 - [ ] Document endpoint shapes, identifiers, pagination, and error cases.
 - [ ] Verify draft/private content and device registrations are not publicly exposed.
@@ -303,11 +307,11 @@ Exit: a documented API supplies representative data for every required screen.
 
 ### Stage 3 — WordPress website (days 5–7)
 
-- [ ] Select and record a free theme approach compatible with the agreed rich-content subset.
-- [ ] Build responsive identity, header/menu/footer, Home, lists, details, academic sections, Documents, and Contact.
-- [ ] Make Home prioritize announcements and provide clear navigation.
-- [ ] Add unofficial-demo labeling and source attribution.
-- [ ] Check mobile, tablet, and desktop layouts and administrator editing flow.
+- [x] Select and record a free theme approach compatible with the agreed rich-content subset: custom MATINF theme.
+- [x] Build responsive identity, header/menu/footer, Home, lists, details, academic sections, Documents, and Contact locally.
+- [x] Make Home prioritize announcements and provide clear navigation.
+- [x] Add unofficial-demo labeling and source attribution.
+- [x] Check mobile, tablet, and desktop layouts and administrator editing flow, including a real browser edit reflected in the API.
 
 Exit: the administrator can manage all demo content and a browser user can navigate all required pages.
 

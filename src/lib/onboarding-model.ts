@@ -1,0 +1,30 @@
+export type Preferences = {
+  version: 1;
+  completed: true;
+  programYears: string[];
+  courseIds: string[];
+  notificationsRequested: boolean;
+  permission: "granted" | "denied" | "unavailable" | "not-requested";
+  syncStatus: "pending" | "not-needed";
+  backend?: string;
+};
+
+export function toggleSelection(values: string[], value: string): string[] {
+  return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
+}
+
+export function parsePreferences(raw: string | null): Preferences | null {
+  if (!raw) return null;
+  try {
+    const value = JSON.parse(raw);
+    if (!value || value.version !== 1 || value.completed !== true ||
+      !Array.isArray(value.programYears) || !value.programYears.every((id: unknown) => typeof id === "string") ||
+      !Array.isArray(value.courseIds) || !value.courseIds.every((id: unknown) => typeof id === "string") ||
+      typeof value.notificationsRequested !== "boolean" ||
+      !["granted", "denied", "unavailable", "not-requested"].includes(value.permission) ||
+      !["pending", "not-needed"].includes(value.syncStatus)) return null;
+    return value;
+  } catch {
+    return null;
+  }
+}

@@ -11,9 +11,10 @@
       ]
     }
   },
+  "exclude": ["node_modules", "example", "matinf"],
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
+    "src/**/*.ts",
+    "src/**/*.tsx",
     ".expo/types/**/*.ts",
     "expo-env.d.ts"
   ]

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MATINF onboarding comparison</title>
+<style>
+body { margin:32px; background:#eef3fa; color:#061344; font:16px system-ui; }
+h1 { font-size:24px; } main { display:flex; flex-wrap:wrap; gap:24px; }
+figure { margin:0; } figcaption { margin-bottom:12px; font-weight:600; }
+.screen { width:343.5px; height:751px; position:relative; overflow:hidden; background:white; border-radius:20px; box-shadow:0 4px 24px #06134418; }
+.reference { width:470.5px; height:836px; position:absolute; left:-63.5px; top:-47px; }
+.actual { width:343.5px; height:auto; position:absolute; top:0; left:0; }
+label { display:block; margin:20px 0; }
+</style>
+<h1>Onboarding: design and Android emulator</h1>
+<p>The reference phone frame is excluded. Both screens use the same display width; Android system bars and aspect ratio differ.</p>
+<label>Overlay opacity <input id="opacity" type="range" min="0" max="100" value="50"></label>
+<main>
+<figure><figcaption>Reference</figcaption><div class="screen"><img class="reference" src="../../design/onboarding-design.png" alt="Supplied design"></div></figure>
+<figure><figcaption>Emulator</figcaption><div class="screen"><img class="actual" src="intro-final.png" alt="Final Android screenshot"></div></figure>
+<figure><figcaption>Overlay</figcaption><div class="screen"><img class="reference" src="../../design/onboarding-design.png" alt=""><img id="overlay" class="actual" style="opacity:.5" src="intro-final.png" alt="Adjustable comparison overlay"></div></figure>
+</main>
+<script>document.querySelector('#opacity').addEventListener('input', event => document.querySelector('#overlay').style.opacity = event.target.value / 100);</script>
+</html>

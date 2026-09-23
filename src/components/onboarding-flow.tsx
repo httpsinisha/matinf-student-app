@@ -1,0 +1,247 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants, { ExecutionEnvironment } from "expo-constants";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, BackHandler, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { siteUrl } from "@/lib/content-api";
+import { parsePreferences, Preferences, toggleSelection } from "@/lib/onboarding-model";
+import { OnboardingScreen } from "./onboarding-screen";
+
+const storageKey = "@matinf/onboarding/v1";
+
+function Button({ title, onPress, secondary = false, disabled = false }: {
+  title: string; onPress: () => void; secondary?: boolean; disabled?: boolean;
+}) {
+  return <Pressable accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={onPress}
+    style={({ pressed }) => [styles.button, secondary && styles.secondary, (pressed || disabled) && { opacity: 0.55 }]}>
+    <Text style={[styles.buttonText, secondary && styles.secondaryText]}>{title}</Text>
+  </Pressable>;
+}
+
+export function OnboardingFlow({ programs, courses, onDone, onCancel, editMode = false }: {
+  programs: { id: string; name: string; level: string; years: number }[];
+  courses: { id: string; name: string; programId: string; year: number }[];
+  onDone: (value: Preferences) => void;
+  onCancel?: () => void;
+  editMode?: boolean;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [step, setStep] = useState(editMode ? 1 : 0);
+  const [saved, setSaved] = useState<Preferences | null>(null);
+  const [editing, setEditing] = useState(editMode);
+  const [programId, setProgramId] = useState(programs[0]?.id || '');
+  const [programYears, setProgramYears] = useState<string[]>([]);
+  const [courseIds, setCourseIds] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const busyRef = useRef(false);
+  const [error, setError] = useState<string | null>(null);
+  const scroll = useRef<ScrollView>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem(storageKey).then((raw) => {
+      const value = parsePreferences(raw);
+      setSaved(value);
+      if (value?.backend === siteUrl) {
+        setProgramYears(value.programYears.filter(id => programs.some(program => id.startsWith(program.id + ':') && Number(id.split(':')[1]) <= program.years)));
+        setCourseIds(value.courseIds.filter(id => courses.some(course => course.id === id)));
+      }
+    }).catch(() => setError("Nije moguće učitati podešavanja. Pokušajte ponovo."))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const listener = BackHandler.addEventListener("hardwareBackPress", () => {
+      if (busyRef.current) return true;
+      if (saved && !editing) return false;
+      if (step > 0) { setStep((value) => value - 1); return true; }
+      if (editing) { onCancel?.(); return true; }
+      return false;
+    });
+    return () => listener.remove();
+  }, [step, saved, editing, onCancel]);
+
+  useEffect(() => { scroll.current?.scrollTo({ y: 0, animated: false }); }, [step]);
+
+  async function finish(requestNotifications: boolean, clearSelections = false) {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    setError(null);
+    let permission: Preferences["permission"] = "not-requested";
+    try {
+      if (requestNotifications) {
+        try {
+          if (Platform.OS === "web" || Constants.executionEnvironment === ExecutionEnvironment.StoreClient) permission = "unavailable";
+          else {
+            // Import only in a native app build: the package's root module
+            // reports an error when loaded in Android Expo Go (SDK 53+).
+            const notifications: typeof import("expo-notifications") = require("expo-notifications");
+            if (Platform.OS === "android") await notifications.setNotificationChannelAsync("academic", {
+              name: "Akademska obavještenja", importance: notifications.AndroidImportance.DEFAULT,
+            });
+            const current = await notifications.getPermissionsAsync();
+            const result = current.granted || !current.canAskAgain ? current : await notifications.requestPermissionsAsync();
+            permission = result.granted ? "granted" : "denied";
+          }
+        } catch { permission = "unavailable"; }
+      }
+      const value: Preferences = {
+        version: 1, completed: true,
+        programYears: clearSelections ? [] : programYears,
+        courseIds: clearSelections ? [] : courseIds,
+        notificationsRequested: requestNotifications, permission,
+        syncStatus: requestNotifications ? "pending" : "not-needed",
+        backend: siteUrl,
+      };
+      await AsyncStorage.setItem(storageKey, JSON.stringify(value));
+      setSaved(value);
+      setProgramYears(value.programYears);
+      setCourseIds(value.courseIds);
+      setEditing(false);
+      onDone(value);
+    } catch {
+      setError("Podešavanja nisu sačuvana. Pokušajte ponovo.");
+    } finally {
+      busyRef.current = false;
+      setBusy(false);
+    }
+  }
+
+  if (loading) return <SafeAreaView style={styles.loading}><ActivityIndicator color="#1054d8" accessibilityLabel="Učitavanje podešavanja" /></SafeAreaView>;
+
+  if (step === 0 && (!saved || editing)) return <View style={{ flex: 1 }}>
+    <OnboardingScreen onContinue={() => { setError(null); setStep(1); }} onSkip={() => void finish(false, true)} />
+    {error && <View style={styles.banner}><Text accessibilityRole="alert" style={styles.error}>{error}</Text></View>}
+    {busy && <View style={styles.busyOverlay}><ActivityIndicator color="#1054d8" /></View>}
+  </View>;
+
+  const complete = !!saved && !editing;
+  const program = programs.find((item) => item.id === programId);
+  const visibleCourses = courses.filter((item) => item.programId === programId);
+  const selectionCount = programYears.length + courseIds.length;
+
+  return <SafeAreaView style={styles.safe}>
+    <ScrollView key={complete ? "complete" : step} ref={scroll} contentContainerStyle={styles.page}>
+      <View style={styles.topbar}>
+        <Text style={styles.wordmark}>MATINF</Text>
+        <Text style={styles.badge}>Opciono</Text>
+      </View>
+      {!complete && <Pressable accessibilityRole="button" onPress={() => editMode && step === 1 ? onCancel?.() : setStep((value) => Math.max(0, value - 1))} disabled={busy} style={styles.back}>
+        <Text style={styles.link}>‹  Nazad</Text>
+      </Pressable>}
+      <Text style={styles.eyebrow}>{complete ? "DOBRO DOŠLI" : `KORAK ${step + 1} OD 3`}</Text>
+      <Text accessibilityRole="header" style={styles.title}>{complete ? "Sve je spremno\nza početak." : step === 1 ? "Šta želite\nda pratite?" : "Budite u toku."}</Text>
+      <Text style={styles.description}>{complete
+        ? "Vaš izbor je sačuvan na ovom uređaju. Možete ga promijeniti u bilo kom trenutku."
+        : step === 1 ? "Odaberite godine studija, pojedinačne predmete ili oboje."
+          : "Dozvolite obavještenja o važnim informacijama i sadržajima koje pratite."}</Text>
+
+      {complete ? <>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Vaša podešavanja</Text>
+          <Text style={styles.cardText}>Godine studija: {saved.programYears.length}{"\n"}Pojedinačni predmeti: {saved.courseIds.length}</Text>
+          <Text style={styles.cardText}>{!saved.notificationsRequested ? "Obavještenja su isključena."
+            : saved.permission === "granted" ? "Dozvola za obavještenja je odobrena. Vaš izbor čeka povezivanje sa servisom za obavještenja."
+              : saved.permission === "denied" ? "Obavještenja nisu dozvoljena. Dozvolu možete promijeniti u podešavanjima uređaja."
+                : "Dozvola za obavještenja trenutno nije dostupna. Vaš izbor je sačuvan."}</Text>
+        </View>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Novosti i obavještenja</Text>
+          <Text style={styles.cardText}>Trenutno nema dostupnih objava.</Text>
+        </View>
+        <Button title="Podesi praćenje" onPress={() => { setStep(1); setEditing(true); }} />
+        <Button title="Pogledaj uvod" secondary onPress={() => { setStep(0); setEditing(true); }} />
+        <Text style={styles.demo}>Nezvanična akademska demonstracija</Text>
+      </> : step === 1 ? <>
+        <Text style={styles.section}>Studijski program</Text>
+        <Text style={styles.hint}>Programi i predmeti preuzeti sa MATINF sajta.</Text>
+        {!programs.length && <Text style={styles.error}>Katalog trenutno nije dostupan. Možete nastaviti bez izbora i podesiti praćenje kasnije.</Text>}
+        {programs.map((item) => <Pressable key={item.id} accessibilityRole="radio" accessibilityState={{ checked: programId === item.id }}
+          onPress={() => setProgramId(item.id)} style={[styles.program, programId === item.id && styles.selected]}>
+          <View style={{ flex: 1 }}><Text style={styles.programName}>{item.name}</Text><Text style={styles.hint}>{item.level}</Text></View>
+          <View style={[styles.radio, programId === item.id && styles.radioSelected]} />
+        </Pressable>)}
+        <Text style={styles.section}>Godina studija</Text>
+        <Text style={styles.hint}>Praćenje godine uključuje njene predmete.</Text>
+        <View style={styles.years}>{Array.from({ length: program?.years || 0 }, (_, i) => i + 1).map((year) => {
+          const id = `${program!.id}:${year}`;
+          const checked = programYears.includes(id);
+          return <Pressable key={id} accessibilityRole="checkbox" accessibilityState={{ checked }} accessibilityLabel={`${year}. godina, ${program!.name}`}
+            onPress={() => setProgramYears((values) => toggleSelection(values, id))} style={[styles.year, checked && styles.selected]}>
+            <Text style={styles.programName}>{checked ? "✓ " : ""}{year}. godina</Text>
+          </Pressable>;
+        })}</View>
+        <Text style={styles.section}>Pojedinačni predmeti</Text>
+        {visibleCourses.map((course) => {
+          const included = programYears.includes(`${course.programId}:${course.year}`);
+          const checked = included || courseIds.includes(course.id);
+          return <Pressable key={course.id} accessibilityRole="checkbox" accessibilityState={{ checked, disabled: included }} disabled={included}
+            onPress={() => setCourseIds((values) => toggleSelection(values, course.id))} style={[styles.program, checked && styles.selected]}>
+            <View style={{ flex: 1 }}><Text style={styles.programName}>{course.name}</Text>
+              <Text style={styles.hint}>{course.year}. godina{included ? " · Uključeno praćenjem godine" : ""}</Text></View>
+            <Text style={styles.check}>{checked ? "✓" : "+"}</Text>
+          </Pressable>;
+        })}
+        <Text accessibilityLiveRegion="polite" style={styles.selectionSummary}>Izabrano: {programYears.length} godina studija · {courseIds.length} predmeta</Text>
+        <Button title="Nastavi" onPress={() => setStep(2)} />
+        <Button title="Preskoči izbor" secondary onPress={() => { setProgramYears([]); setCourseIds([]); setStep(2); }} />
+      </> : <>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Vaš izbor</Text>
+          {programYears.map((id) => { const [pid, year] = id.split(":"); return <Text key={id} style={styles.cardText}>{programs.find((item) => item.id === pid)?.name ?? pid} · {year}. godina</Text>; })}
+          {courseIds.map((id) => <Text key={id} style={styles.cardText}>{courses.find((course) => course.id === id)?.name ?? id}</Text>)}
+          {!selectionCount && <Text style={styles.cardText}>Samo opšta obavještenja. Niste izabrali godine ili predmete.</Text>}
+          <Pressable accessibilityRole="button" disabled={busy} onPress={() => setStep(1)} style={styles.edit}><Text style={styles.link}>Promijeni izbor</Text></Pressable>
+        </View>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Vi odlučujete</Text>
+          <Text style={styles.cardText}>Dozvolu ćemo zatražiti tek kada pritisnete dugme ispod. Možete nastaviti i bez obavještenja.</Text>
+        </View>
+        <View accessible accessibilityLabel="Korak 3 od 3" style={styles.dots}>{[0, 1, 2].map((index) => <View key={index} style={[styles.dot, index === 2 && styles.activeDot]} />)}</View>
+        <Button title={busy ? "Čuvanje…" : "Dozvoli obavještenja"} disabled={busy} onPress={() => void finish(true)} />
+        <Button title="Ne sada" secondary disabled={busy} onPress={() => void finish(false)} />
+      </>}
+      {error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
+    </ScrollView>
+  </SafeAreaView>;
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: "white" },
+  loading: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "white" },
+  page: { padding: 24, paddingTop: 30, width: "100%", maxWidth: 540, alignSelf: "center", flexGrow: 1 },
+  topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 },
+  wordmark: { color: "#061344", fontWeight: "800", fontSize: 26 },
+  badge: { color: "#4d5b78", backgroundColor: "#ecf2ff", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 8 },
+  back: { alignSelf: "flex-start", minHeight: 44, justifyContent: "center", marginBottom: 12 },
+  link: { color: "#1054d8", fontSize: 17, fontWeight: "500" },
+  eyebrow: { color: "#1054d8", fontSize: 12, fontWeight: "700", letterSpacing: 2, marginBottom: 10 },
+  title: { color: "#061344", fontSize: 38, lineHeight: 44, fontWeight: "700", letterSpacing: -1 },
+  description: { color: "#4d5b78", fontSize: 18, lineHeight: 27, marginTop: 14, marginBottom: 24 },
+  section: { color: "#061344", fontWeight: "700", fontSize: 20, marginTop: 14, marginBottom: 8 },
+  hint: { color: "#64708a", fontSize: 13, lineHeight: 20, marginBottom: 6 },
+  program: { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, borderColor: "#dfe6f1", padding: 14, borderRadius: 16, marginVertical: 5, minHeight: 64 },
+  selected: { borderColor: "#1054d8", backgroundColor: "#edf4ff" },
+  programName: { color: "#172951", fontSize: 16, lineHeight: 22, fontWeight: "500" },
+  radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: "#c0cce1" },
+  radioSelected: { borderColor: "#1054d8", borderWidth: 6 },
+  years: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginVertical: 8 },
+  year: { borderWidth: 1, borderColor: "#dfe6f1", padding: 12, borderRadius: 12, minHeight: 48 },
+  check: { fontSize: 24, color: "#1054d8" },
+  selectionSummary: { color: "#4d5b78", fontSize: 14, textAlign: "center", marginVertical: 20 },
+  button: { backgroundColor: "#1054d8", borderRadius: 14, minHeight: 56, padding: 14, alignItems: "center", justifyContent: "center", marginTop: 10 },
+  buttonText: { color: "white", fontSize: 18, fontWeight: "500", textAlign: "center" },
+  secondary: { backgroundColor: "transparent" },
+  secondaryText: { color: "#1054d8" },
+  card: { backgroundColor: "#f3f7ff", borderRadius: 20, padding: 22, marginBottom: 18 },
+  cardTitle: { color: "#061344", fontSize: 20, fontWeight: "700", marginBottom: 8 },
+  cardText: { color: "#4d5b78", fontSize: 16, lineHeight: 25, marginBottom: 8 },
+  edit: { minHeight: 44, justifyContent: "center", marginTop: 4 },
+  dots: { flexDirection: "row", gap: 12, justifyContent: "center", marginVertical: 24 },
+  dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#ced7e7" },
+  activeDot: { backgroundColor: "#1054d8" },
+  demo: { color: "#64708a", textAlign: "center", fontSize: 12, marginTop: 30 },
+  error: { color: "#ac2538", fontSize: 15, textAlign: "center", padding: 12 },
+  banner: { position: "absolute", top: 30, left: 16, right: 16, backgroundColor: "#fff2f3", borderRadius: 12 },
+  busyOverlay: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center", backgroundColor: "#ffffff99" },
+});

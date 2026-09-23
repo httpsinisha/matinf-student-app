@@ -1,56 +1,54 @@
-# Welcome to your Expo app 👋
+﻿# MATINF
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Unofficial academic demonstration: a WordPress website/content API and an Expo SDK 57 Android app. Interface language: Serbian Latin. The project follows [PLAN.md](PLAN.md); current decisions and remaining gates are in [docs/setup-status.md](docs/setup-status.md).
 
-## Get started
+## Run the local WordPress site
 
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```powershell
+npm --prefix wordpress ci
+npm run wordpress
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+Open http://127.0.0.1:9400 or http://127.0.0.1:9400/wp-admin/.
 
-### Other setup steps
+The local admin login is stored privately in `wordpress/.runtime/local-admin.json`. Do not share or commit it. Content and the SQLite database persist across restarts. See the [WordPress guide](wordpress/README.md) for editing, API access, backups, packaging, and hosting.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Run the Android app
 
-## Learn more
+```powershell
+npm ci
+npm run android
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+This opens the root Expo app on the connected Android emulator/device. Onboarding works locally; the remaining reader screens and live notification subscription integration are pending. `matinf/` is an archived starter, not the active app.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+For the standalone emulator feasibility build:
 
-## Join the community
+```powershell
+./scripts/build-android-preview.ps1
+```
 
-Join our community of developers creating universal apps.
+It uses Android Studio's bundled JDK and installed SDK. It targets x86_64 and uses a generated debug signing key: it is not the final Redmi APK. The first build downloads Gradle/native SDK dependencies and can take substantially longer than later builds. Build output is in `artifacts/build/`.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Verify
+
+```powershell
+npx tsc --noEmit
+node --test scripts/onboarding-model.test.mjs
+npm run test:wordpress
+node wordpress/scripts/check-site.mjs
+```
+
+The browser check requires Google Chrome. The WordPress tests use a separate persistent test database, not the site's working content.
+
+## Project map
+
+- `src/`: Android app, onboarding, and local preference model.
+- `wordpress/plugins/matinf-core/`: academic content types, metadata validation, public API, and demo content.
+- `wordpress/themes/matinf/`: responsive WordPress theme.
+- `wordpress/scripts/`: local runtime, checks, packaging, and backup tools.
+- `design/`: supplied visual references.
+- `artifacts/`: screenshots and local verification outputs.
+- [API contract](docs/api-contract.md), [hosting steps](docs/hosting-setup.md), [current status](docs/setup-status.md).
+
+All sample staff, announcements, courses, and documents are explicitly demonstration content. No hosting, push-delivery, final-signing, or Redmi compatibility result is claimed until those checks actually pass.
