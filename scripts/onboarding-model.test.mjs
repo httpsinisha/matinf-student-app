@@ -1,6 +1,19 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { parsePreferences, restoreProgramId, toggleSelection } from '../src/lib/onboarding-model.ts';
+import { followedCourses, parsePreferences, restoreProgramId, toggleSelection } from '../src/lib/onboarding-model.ts';
+
+test('course totals include years and individual courses across programs without duplicates', () => {
+  const courses = [
+    { id: 'a', programId: 'basic', year: 1 }, { id: 'b', programId: 'basic', year: 1 },
+    { id: 'c', programId: 'basic', year: 2 }, { id: 'd', programId: 'master', year: 1 },
+  ];
+  const ids = (years, selected) => followedCourses(years, selected, courses).map(course => course.id);
+  assert.deepEqual(ids(['basic:1'], []), ['a', 'b']);
+  assert.deepEqual(ids(['basic:1'], ['a', 'c']), ['a', 'b', 'c']);
+  assert.deepEqual(ids(['basic:1', 'master:1'], ['a', 'c']), ['a', 'b', 'c', 'd']);
+  assert.deepEqual(ids([], ['a', 'c']), ['a', 'c']);
+  assert.deepEqual(ids([], ['missing']), []);
+});
 
 const saved = {
   version: 1, completed: true, programYears: ['demo-mi:1'], courseIds: [],

@@ -1,9 +1,18 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { createTokenChangeListener, pushDestination } from '../src/lib/push-model.ts';
+import { createTokenChangeListener, isNotificationForPost, pushDestination } from '../src/lib/push-model.ts';
 
 const site = 'https://sinisa.alwaysdata.net';
 const valid = { version: 1, siteUrl: site, collection: 'announcements', id: 73 };
+
+test('reading a post matches both categories but preserves unrelated tray notifications', () => {
+  assert.equal(isNotificationForPost(valid, site, 73), true);
+  assert.equal(isNotificationForPost({ ...valid, collection: 'news' }, site, 73), true);
+  for (const data of [{ ...valid, id: 74 }, { ...valid, siteUrl: 'https://other.invalid' },
+    { ...valid, collection: 'courses' }, { ...valid, id: '73' }, null]) {
+    assert.equal(isNotificationForPost(data, site, 73), false);
+  }
+});
 test('fetching the same Android token during registration does not start a registration loop', () => {
   let registrations = 0;
   let current = 'first-fcm-token';

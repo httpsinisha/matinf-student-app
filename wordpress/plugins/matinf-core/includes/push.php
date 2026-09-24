@@ -173,7 +173,7 @@ function matinf_push_tick() {
             $job->token_hash = $device->token_hash;
             $batch[] = ['to' => $device->token, 'title' => wp_html_excerpt(html_entity_decode(wp_strip_all_tags($post->post_title), ENT_QUOTES, 'UTF-8'), 100, '…'),
                 'body' => wp_html_excerpt(wp_strip_all_tags(strip_shortcodes($post->post_excerpt ?: $post->post_content)), 200, '…'),
-                'sound' => 'default', 'channelId' => 'academic', 'ttl' => 86400,
+                'sound' => 'default', 'channelId' => 'academic', 'priority' => 'high', 'ttl' => 86400,
                 'data' => ['version' => 1, 'siteUrl' => untrailingslashit(home_url()), 'collection' => has_category('obavjestenja', $post) ? 'announcements' : 'news', 'id' => (int) $job->post_id]];
             $active[] = $job;
         }

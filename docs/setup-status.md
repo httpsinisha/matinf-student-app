@@ -2,6 +2,26 @@
 
 Updated: 24 September 2026.
 
+## Clearer following selection and effective course totals
+
+Native acceptance passed via `scripts/check-android-following.mjs --native --hosted`: adding a master year changed the total from five to seven effective courses and showed undergraduate and master selections together. Cancelling and reopening restored the original summary; existing preferences were left unchanged. Screenshots `following-summary.png` and `following-multiple-programs.png` were visually inspected.
+
+The following editor now shows all study levels together with expandable program cards instead of radio buttons and hidden level tabs. Collapsed cards report followed years and effective course counts. The global summary groups selections by program and level and allows removing an entire program's following. Course totals include the union of individual courses and courses included through followed years, without duplicates. Existing stored preferences and push permission choices are preserved. TypeScript and all eight model tests pass, including multiple-program/year counting and overlapping individual choices. The updated APK built and installed on emulator-5554; installation needed an emulator restart after Android package processing stalled.
+
+## Dismiss notifications when reading the article
+
+The updated emulator APK built successfully and was installed with `adb install -r` on emulator-5554, preserving app data. No MATINF tray notifications were present before this check, so on-device dismissal still needs a newly delivered notification.
+
+The user confirmed faster delivery after the priority update and that tapping a notification opens its article and clears the tapped notification. Opening the same article through the app previously left its notification in the tray. The detail screen now dismisses presented notifications after article content is available, and checks again when returning to that open article from the background. Matching validates the backend and payload and uses WordPress post ID across news/announcements, preserving notifications for other posts. Failed detail loads do not dismiss notifications. TypeScript and all seven model tests pass. A fresh remote notification is still needed to verify tray removal on-device.
+
+## Push delivery confirmed by user; latency improvement
+
+The targeted queue integration test passes, including high-priority payloads, recipient matching, deduplication, retries and receipts. The 0.2.1 ZIP was packaged with eight verified portable entries at `wordpress/dist/matinf-core-0.2.1.zip`. These checks use simulated Expo responses; improved real-world latency is not yet measured.
+
+The user now reports receiving real notifications both while using another app and after removing MATINF from recent apps, with longer waits in the latter case. This supersedes the earlier InvalidCredentials blocker below. Delivery times have not been measured, and notification-tap navigation has not yet been independently verified.
+
+Plugin 0.2.1 explicitly requests high delivery priority for visible push notifications. Previously the omitted priority used Android's normal delivery priority, which can be delayed in Doze. This is a server-only change; no APK rebuild is required. The existing enqueue/worker cron stages still run on the every-minute schedule and can span two invocations. High priority does not guarantee instant delivery or establish the cause of the user's observed delay. The hosted site still needs the 0.2.1 ZIP uploaded.
+
 ## Push implementation — activation and acceptance underway
 
 Expo project `370f402c-255a-4990-b120-39a8812ea99c` and Firebase project `matinf-e8e3b` were supplied by the user. The ignored root `google-services.json` matches `com.matinf.demo`; the Android emulator has Google Play services. A separate private RSA-2048/SHA256 upload JKS and local password file were generated under ignored `artifacts/build/` because Expo rejected the initial development keystore. No private Firebase key has been read or stored in source control. The user confirmed Expo accepted the new JKS and Firebase key. This is not yet a real delivery test.
@@ -10,7 +30,7 @@ Plugin 0.2.0 adds authenticated-per-installation registrations, validated subscr
 
 All 14 WordPress integration cases pass across the full run and a targeted rerun: the first run had 12 passes and two HTTP timeouts while native compilation and unused Metro servers competed for memory; both timed-out cases passed after those servers were stopped. Queue/receipt tests use intercepted HTTP, not real delivery. Six model tests and TypeScript validation pass. Native testing exposed SDK 57's token event on every token fetch; a regression-tested listener now ignores unchanged tokens, preventing repeated registration. The first Firebase native build passed in 24m 55s; the corrected build passed in 2m 20s and was installed. The portable plugin ZIP has eight verified files; a versioned copy is `wordpress/dist/matinf-core-0.2.0.zip`.
 
-The hosted health endpoint now reports plugin 0.2.0, public reader/PDF checks pass, and an unauthenticated registration returns the expected 401. Hosted HTTPS probe, recurring cron, and real notification/tap acceptance are still pending; no live delivery is claimed yet.
+The hosted health endpoint now reports plugin 0.2.0, public reader/PDF checks pass, and an unauthenticated registration returns the expected 401. The corrected native app registers successfully and displays its enabled status (`artifacts/push/registered.png`). The user reports one active installation, a successful hosted Expo HTTPS probe, a scheduled every-minute task, and three jobs failing with `InvalidCredentials` (posts 76, 80, 82). Those posts are present in the public feed with matching audiences. Expo's specific **FCM V1 service account key** assignment is being checked; an accepted Google Play service-account upload alone does not establish FCM credentials. Live delivery and notification-tap acceptance are not yet verified. The initial `am kill` background check left a process alive, so no cold-start test is claimed either.
 
 ## Study selection correction
 

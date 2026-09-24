@@ -5,7 +5,7 @@ import { ActivityIndicator, Alert, BackHandler, Image, Linking, Pressable, Refre
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Catalog, Collection, Content, levelLabel, loadCatalog, Page, Related, siteUrl, useContent } from '@/lib/content-api';
 import { parsePreferences, Preferences } from '@/lib/onboarding-model';
-import { changePushPreference, usePush } from '@/lib/push';
+import { changePushPreference, useDismissPostNotifications, usePush } from '@/lib/push';
 import type { PushDestination } from '@/lib/push-model';
 import { ContentBody, openUrl } from './content-body';
 import { OnboardingFlow } from './onboarding-flow';
@@ -206,6 +206,7 @@ function Listing({ screen, navigate, preferences, catalog, edit }: { screen: Scr
 function Detail({ screen, navigate, preferences, edit }: { screen: Screen; navigate: Navigate; preferences: Preferences; edit: () => void }) {
   const resource = useContent<Content>(`/content/${screen.collection}/${screen.id}`);
   const item = resource.data;
+  useDismissPostNotifications(item && (item.type === 'news' || item.type === 'announcements') ? item.id : undefined);
   const relation = (related: Related) => <Pressable key={`${related.type}/${related.id}`} accessibilityRole="button" onPress={() => navigate({ collection: related.type, id: related.id })} style={s.relation}><View style={s.squareIcon}><Icon name={icons[related.type]} /></View><Text style={[s.cardTitle, s.flex]}>{related.title}</Text><Icon name="chevron-forward" size={18} /></Pressable>;
   const subscribed = item?.type === 'courses' && (preferences.courseIds.includes(String(item.id)) || preferences.programYears.includes(`${item.meta.programId}:${item.meta.year}`));
   return <ScrollView contentContainerStyle={s.page} refreshControl={<RefreshControl refreshing={resource.loading && !!item} onRefresh={() => void resource.refresh()} />}>

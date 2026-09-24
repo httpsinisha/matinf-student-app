@@ -22,6 +22,12 @@ export function toggleSelection(values: string[], value: string): string[] {
   return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
 }
 
+export function followedCourses<T extends { id: string; programId: string; year: number }>(programYears: string[], courseIds: string[], courses: T[]): T[] {
+  const years = new Set(programYears);
+  const individual = new Set(courseIds);
+  return [...new Map(courses.filter(course => individual.has(course.id) || years.has(`${course.programId}:${course.year}`)).map(course => [course.id, course])).values()];
+}
+
 export function parsePreferences(raw: string | null): Preferences | null {
   if (!raw) return null;
   try {

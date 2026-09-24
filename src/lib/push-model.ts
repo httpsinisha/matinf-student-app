@@ -1,5 +1,10 @@
 export type PushDestination = { collection: 'news' | 'announcements'; id: number };
 
+export function isNotificationForPost(data: unknown, backend: string, postId: number): boolean {
+  // News and announcements share WordPress post IDs, including dual-category posts.
+  return pushDestination(data, backend)?.id === postId;
+}
+
 // Android SDK 57 also emits its token event when the existing token is fetched.
 // Only a changed token should request another registration.
 export function createTokenChangeListener(onChange: () => void) {

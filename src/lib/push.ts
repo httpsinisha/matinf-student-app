@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import { apiUrl, siteUrl } from './content-api';
 import type { Preferences } from './onboarding-model';
-import { createTokenChangeListener, pushDestination, type PushDestination } from './push-model';
+import { createTokenChangeListener, isNotificationForPost, pushDestination, type PushDestination } from './push-model';
 
 type Notifications = typeof import('expo-notifications');
 type Identity = { id: string; secret: string };
@@ -90,6 +90,27 @@ export async function changePushPreference(preferences: Preferences, enabled: bo
     }
   }
   return { ...preferences, notificationsRequested: enabled, permission, syncStatus: enabled ? 'pending' : 'not-needed' };
+}
+
+export function useDismissPostNotifications(postId: number | undefined) {
+  useEffect(() => {
+    if (!native || !postId) return;
+    const notifications: Notifications = require('expo-notifications');
+    let active = true;
+    const dismiss = async () => {
+      if (!active || AppState.currentState !== 'active') return;
+      const presented = await notifications.getPresentedNotificationsAsync();
+      if (!active || AppState.currentState !== 'active') return;
+      await Promise.allSettled(presented
+        .filter(item => isNotificationForPost(item.request.content.data, siteUrl, postId))
+        .map(item => notifications.dismissNotificationAsync(item.request.identifier)));
+    };
+    void dismiss().catch(() => undefined);
+    const foreground = AppState.addEventListener('change', state => {
+      if (state === 'active') void dismiss().catch(() => undefined);
+    });
+    return () => { active = false; foreground.remove(); };
+  }, [postId]);
 }
 
 export function usePush(preferences: Preferences | null, onOpen: (destination: PushDestination) => void) {

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, BackHandler, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { siteUrl } from "@/lib/content-api";
-import { parsePreferences, Preferences, restoreProgramId, toggleSelection } from "@/lib/onboarding-model";
+import { followedCourses, parsePreferences, Preferences, restoreProgramId, toggleSelection } from "@/lib/onboarding-model";
 import { OnboardingScreen } from "./onboarding-screen";
 
 const storageKey = "@matinf/onboarding/v1";
@@ -121,8 +121,8 @@ export function OnboardingFlow({ programs, courses, onDone, onCancel, editMode =
   </View>;
 
   const complete = !!saved && !editing;
-  const program = programs.find((item) => item.id === programId);
-  const visibleCourses = courses.filter((item) => item.programId === programId);
+  const effectiveCourses = followedCourses(programYears, courseIds, courses);
+  const followedPrograms = orderedPrograms.filter(item => programYears.some(id => id.startsWith(item.id + ':')) || effectiveCourses.some(course => course.programId === item.id));
   const selectionCount = programYears.length + courseIds.length;
 
   return <SafeAreaView style={styles.safe}>
@@ -144,7 +144,7 @@ export function OnboardingFlow({ programs, courses, onDone, onCancel, editMode =
       {complete ? <>
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Vaša podešavanja</Text>
-          <Text style={styles.cardText}>Godine studija: {saved.programYears.length}{"\n"}Pojedinačni predmeti: {saved.courseIds.length}</Text>
+          <Text style={styles.cardText}>Godine studija: {saved.programYears.length}{"\n"}Ukupno predmeta: {effectiveCourses.length}</Text>
           <Text style={styles.cardText}>{!saved.notificationsRequested ? "Obavještenja su isključena."
             : saved.permission === "granted" ? "Dozvola za obavještenja je odobrena. Status povezivanja dostupan je u odjeljku Više."
               : saved.permission === "denied" ? "Obavještenja nisu dozvoljena. Dozvolu možete promijeniti u podešavanjima uređaja."
@@ -160,47 +160,71 @@ export function OnboardingFlow({ programs, courses, onDone, onCancel, editMode =
       </> : step === 1 ? <>
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Vaš izbor za praćenje</Text>
-          {programYears.map(id => { const [pid, year] = id.split(':'); return <Text key={id} style={styles.cardText}>{programs.find(item => item.id === pid)?.name ?? pid} · {year}. godina</Text>; })}
-          {courseIds.map(id => <Text key={id} style={styles.cardText}>{courses.find(item => item.id === id)?.name ?? id}</Text>)}
+          <Text accessibilityLiveRegion="polite" style={styles.cardText}>Programi: {followedPrograms.length} · Godine: {programYears.length} · Predmeti: {effectiveCourses.length}</Text>
+          {followedPrograms.map(item => {
+            const years = programYears.filter(id => id.startsWith(item.id + ':')).map(id => id.split(':')[1]);
+            const extra = courses.filter(course => course.programId === item.id && courseIds.includes(course.id) && !programYears.includes(`${course.programId}:${course.year}`));
+            return <View key={item.id} style={styles.summaryProgram}>
+              <Text style={styles.hint}>{item.level}</Text>
+              <Text style={styles.programName}>{item.name}</Text>
+              {!!years.length && <Text style={styles.cardText}>Godine: {years.join(', ')} · svi njihovi predmeti</Text>}
+              {!!extra.length && <Text style={styles.cardText}>Dodatni predmeti: {extra.map(course => course.name).join(', ')}</Text>}
+              <Pressable accessibilityRole="button" accessibilityLabel={`Ukloni praćenje: ${item.name}`} onPress={() => {
+                setProgramYears(values => values.filter(id => !id.startsWith(item.id + ':')));
+                setCourseIds(values => values.filter(id => !courses.some(course => course.id === id && course.programId === item.id)));
+              }} style={styles.edit}><Text style={styles.link}>Ukloni praćenje programa</Text></Pressable>
+            </View>;
+          })}
           {!selectionCount && <Text style={styles.cardText}>Samo opšta obavještenja. Označite godinu ili predmet ispod.</Text>}
           <Text style={styles.hint}>Promjene se primjenjuju kada sačuvate izbor.</Text>
           {editMode && <Button title={busy ? "Čuvanje…" : "Sačuvaj izbor"} disabled={busy} onPress={() => void finish(false, false, true)} />}
         </View>
-        <Text style={styles.section}>Nivo studija</Text>
-        <View style={styles.years}>{levels.map(level => <Pressable key={level} accessibilityRole="tab" accessibilityState={{ selected: program?.level === level }}
-          onPress={() => setProgramId(restoreProgramId({ selectedProgramId: programId, programYears, courseIds }, programs.filter(item => item.level === level), courses))}
-          style={[styles.year, program?.level === level && styles.selected]}><Text style={styles.programName}>{level}</Text></Pressable>)}</View>
-        <Text style={styles.section}>Studijski program</Text>
-        <Text style={styles.hint}>Izaberite program, zatim označite godinu ili predmete koje pratite.</Text>
+        <Text style={styles.section}>Dodajte ili uredite praćenja</Text>
+        <Text style={styles.hint}>Možete pratiti više programa sa različitih nivoa studija. Otvorite karticu i označite godine ili pojedinačne predmete.</Text>
         {!programs.length && <Text style={styles.error}>Katalog trenutno nije dostupan. Možete nastaviti bez izbora i podesiti praćenje kasnije.</Text>}
-        {programs.filter(item => item.level === program?.level).map((item) => <Pressable key={item.id} accessibilityLabel={item.name} accessibilityRole="radio" accessibilityState={{ checked: programId === item.id }}
-          onPress={() => setProgramId(item.id)} style={[styles.program, programId === item.id && styles.selected]}>
-          <View style={{ flex: 1 }}><Text style={styles.programName}>{item.name}</Text><Text style={styles.hint}>{item.level}</Text></View>
-          <View style={[styles.radio, programId === item.id && styles.radioSelected]} />
-        </Pressable>)}
-        <Text style={styles.section}>Godina studija</Text>
-        <Text style={styles.programName}>{program?.name}</Text>
-        <Text style={styles.hint}>Praćenje godine uključuje njene predmete.</Text>
-        <View style={styles.years}>{Array.from({ length: program?.years || 0 }, (_, i) => i + 1).map((year) => {
-          const id = `${program!.id}:${year}`;
-          const checked = programYears.includes(id);
-          return <Pressable key={id} accessibilityRole="checkbox" accessibilityState={{ checked }} accessibilityLabel={`${year}. godina, ${program!.name}`}
-            onPress={() => setProgramYears((values) => toggleSelection(values, id))} style={[styles.year, checked && styles.selected]}>
-            <Text style={styles.programName}>{checked ? "✓ " : ""}{year}. godina</Text>
-          </Pressable>;
-        })}</View>
-        <Text style={styles.section}>Pojedinačni predmeti</Text>
-        {visibleCourses.map((course) => {
-          const included = programYears.includes(`${course.programId}:${course.year}`);
-          const checked = included || courseIds.includes(course.id);
-          return <Pressable key={course.id} accessibilityRole="checkbox" accessibilityState={{ checked, disabled: included }} disabled={included}
-            onPress={() => setCourseIds((values) => toggleSelection(values, course.id))} style={[styles.program, checked && styles.selected]}>
-            <View style={{ flex: 1 }}><Text style={styles.programName}>{course.name}</Text>
-              <Text style={styles.hint}>{course.year}. godina{included ? " · Uključeno praćenjem godine" : ""}</Text></View>
-            <Text style={styles.check}>{checked ? "✓" : "+"}</Text>
-          </Pressable>;
-        })}
-        <Text accessibilityLiveRegion="polite" style={styles.selectionSummary}>Izabrano: {programYears.length} godina studija · {courseIds.length} predmeta</Text>
+        {levels.map(level => <View key={level}>
+          <Text accessibilityRole="header" style={styles.section}>{level}</Text>
+          {programs.filter(item => item.level === level).map(item => {
+            const expanded = programId === item.id;
+            const years = programYears.filter(id => id.startsWith(item.id + ':')).map(id => id.split(':')[1]);
+            const count = effectiveCourses.filter(course => course.programId === item.id).length;
+            const following = years.length > 0 || count > 0;
+            return <View key={item.id} style={[styles.programCard, following && styles.followedCard]}>
+              <Pressable accessibilityLabel={item.name} accessibilityRole="button" accessibilityState={{ expanded }}
+                onPress={() => setProgramId(expanded ? '' : item.id)} style={styles.programHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.programName}>{item.name}</Text>
+                  <Text style={[styles.hint, following && styles.followedText]}>{following ? `✓ Pratite · Godine: ${years.join(', ') || '—'} · Predmeti: ${count}` : 'Ne pratite ovaj program'}</Text>
+                </View>
+                <Text style={styles.check}>{expanded ? '−' : '+'}</Text>
+              </Pressable>
+              {expanded && <View style={styles.programBody}>
+                <Text style={styles.section}>Godina studija</Text>
+                <Text style={styles.hint}>Izabrana godina uključuje sve njene predmete i obavještenja. Za praćenje samo pojedinih predmeta ostavite godinu neoznačenu.</Text>
+                <View style={styles.years}>{Array.from({ length: item.years }, (_, i) => i + 1).map(year => {
+                  const id = `${item.id}:${year}`;
+                  const checked = programYears.includes(id);
+                  return <Pressable key={id} accessibilityRole="checkbox" accessibilityState={{ checked }} accessibilityLabel={`${year}. godina, ${item.name}`}
+                    onPress={() => setProgramYears(values => toggleSelection(values, id))} style={[styles.year, checked && styles.selected]}>
+                    <Text style={styles.programName}>{checked ? '✓ ' : ''}{year}. godina</Text>
+                  </Pressable>;
+                })}</View>
+                <Text style={styles.section}>Predmeti</Text>
+                {courses.filter(course => course.programId === item.id).map(course => {
+                  const included = programYears.includes(`${course.programId}:${course.year}`);
+                  const checked = included || courseIds.includes(course.id);
+                  return <Pressable key={course.id} accessibilityRole="checkbox" accessibilityLabel={course.name} accessibilityState={{ checked, disabled: included }} disabled={included}
+                    onPress={() => setCourseIds(values => toggleSelection(values, course.id))} style={[styles.program, checked && styles.selected]}>
+                    <View style={{ flex: 1 }}><Text style={styles.programName}>{course.name}</Text>
+                      <Text style={styles.hint}>{course.year}. godina{included ? ' · Uključeno praćenjem godine' : ''}</Text></View>
+                    <Text style={styles.check}>{checked ? '✓' : '+'}</Text>
+                  </Pressable>;
+                })}
+              </View>}
+            </View>;
+          })}
+        </View>)}
+        <Text accessibilityLiveRegion="polite" style={styles.selectionSummary}>Ukupno: {followedPrograms.length} programa · {programYears.length} godina studija · {effectiveCourses.length} predmeta</Text>
         {editMode ? <>
           <Button title={busy ? "Čuvanje…" : "Sačuvaj izbor"} disabled={busy} onPress={() => void finish(false, false, true)} />
           <Button title="Podešavanja dozvole za obavještenja" secondary disabled={busy} onPress={() => setStep(2)} />
@@ -246,8 +270,12 @@ const styles = StyleSheet.create({
   program: { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, borderColor: "#dfe6f1", padding: 14, borderRadius: 16, marginVertical: 5, minHeight: 64 },
   selected: { borderColor: "#1054d8", backgroundColor: "#edf4ff" },
   programName: { color: "#172951", fontSize: 16, lineHeight: 22, fontWeight: "500" },
-  radio: { width: 20, height: 20, borderRadius: 10, borderWidth: 2, borderColor: "#c0cce1" },
-  radioSelected: { borderColor: "#1054d8", borderWidth: 6 },
+  programCard: { borderWidth: 1, borderColor: '#dfe6f1', borderRadius: 16, marginVertical: 6, overflow: 'hidden' },
+  followedCard: { borderColor: '#1054d8' },
+  programHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, backgroundColor: '#f8faff', minHeight: 80 },
+  programBody: { padding: 14, borderTopWidth: 1, borderTopColor: '#dfe6f1' },
+  followedText: { color: '#1054d8', marginTop: 6 },
+  summaryProgram: { borderTopWidth: 1, borderTopColor: '#dfe6f1', paddingTop: 12, marginTop: 8 },
   years: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginVertical: 8 },
   year: { borderWidth: 1, borderColor: "#dfe6f1", padding: 12, borderRadius: 12, minHeight: 48 },
   check: { fontSize: 24, color: "#1054d8" },

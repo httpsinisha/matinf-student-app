@@ -47,7 +47,15 @@ U aplikaciji otvoriti **Više → Uključi push obavještenja**, odobriti Androi
 6. Provjeriti otvaranje nakon uklanjanja aplikacije iz recent apps, te ažuriranje objave bez ponovnog slanja.
 7. U WordPress dijagnostici provjeriti red i potvrde. Expo potvrde se provjeravaju nakon 15 minuta. Status **FCM/APNs prihvatio** znači prihvatanje od transportnog servisa, ne potvrdu prikaza na ekranu.
 
+## Ako piše InvalidCredentials
+
+Provjeriti **Expo project → Credentials → Android → com.matinf.demo → Service Credentials → FCM V1 service account key**. Google service account dodat za Google Play submission u početnom čarobnjaku nije isto što i FCM V1 dodjela. Na FCM V1 mjestu izabrati/učitati privatni ključ iz Firebase projekta `matinf-e8e3b`. Ako je već dodijeljen, provjeriti da nije opozvan, da pripada istom projektu kao `google-services.json`, da je Firebase Cloud Messaging API uključen i da service account ima ulogu Firebase Cloud Messaging API Admin. Privatni JSON ne slati u razgovor.
+
+Poslije ispravke napraviti novu ciljanu probnu objavu s označenim push-om. Poslovi koji su trajno završili s `InvalidCredentials` ostaju u istoriji i ne šalju se automatski ponovo. Obična izmjena stare objave takođe ne pokreće novo slanje.
+
 ## Implementacija i granice
+
+Od verzije 0.2.1 plugin šalje vidljive push poruke s `priority: high`. Android tada pokušava bržu dostavu i kada uređaj miruje; trenutno stizanje nije garantovano. Ovo zahtijeva samo ažuriranje WordPress plugin-a, bez novog APK-a. Priprema reda i slanje su zasebni cron događaji: uz zakazani zadatak svake minute mogu se obraditi u dvije uzastopne obrade. Provjera potvrda nakon 15 minuta ne odlaže samo slanje. [Firebase prioritet dostave](https://firebase.google.com/docs/cloud-messaging/android-message-priority).
 
 Registracije su u privatnoj WordPress tabeli, bez javnog čitanja. Nasumičan ključ instalacije čuva se u Android SecureStore; server čuva njegov SHA-256 sažetak. Svaka instalacija može promijeniti ili isključiti samo sebe. Rotacija tokena ne mijenja studijski izbor. Nema emaila ni studentskih naloga.
 

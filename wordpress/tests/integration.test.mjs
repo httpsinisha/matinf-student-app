@@ -286,7 +286,7 @@ test('push queue matches the feed, deduplicates publication, retries temporary f
         wp_update_post(['ID' => $post, 'post_title' => 'Edited push fixture']);
         matinf_push_enqueue($post);
         $statuses = $wpdb->get_col($wpdb->prepare("SELECT status FROM $j WHERE post_id=%d", $post));
-        echo wp_json_encode(['scheduled' => $scheduled, 'recipients' => $recipients, 'expected' => [$ids['year'], $ids['course']], 'retry' => $retry, 'waiting' => $waiting, 'statuses' => $statuses, 'payloads' => array_column($sent, 'data')]);
+        echo wp_json_encode(['scheduled' => $scheduled, 'recipients' => $recipients, 'expected' => [$ids['year'], $ids['course']], 'retry' => $retry, 'waiting' => $waiting, 'statuses' => $statuses, 'payloads' => array_column($sent, 'data'), 'priorities' => array_column($sent, 'priority')]);
     } finally {
         delete_option('matinf_push_enabled'); wp_clear_scheduled_hook('matinf_push_enqueue', [$post]); wp_clear_scheduled_hook('matinf_push_tick');
         $wpdb->delete($j, ['post_id' => $post]); foreach ($ids as $id) $wpdb->delete($d, ['installation' => $id]); wp_delete_post($post, true);
@@ -297,6 +297,7 @@ test('push queue matches the feed, deduplicates publication, retries temporary f
   assert.deepEqual(result.retry.map(item => [item.status, Number(item.attempts)]), [['pending', 1], ['pending', 1]]);
   assert.deepEqual(result.waiting, ['receipt', 'receipt']);
   assert.deepEqual(result.statuses, ['accepted', 'accepted']);
+  assert.deepEqual(result.priorities, ['high', 'high']);
   assert.ok(result.payloads.every(item => item.collection === 'announcements' && item.siteUrl === base && item.version === 1 && item.id > 0));
 });
 
