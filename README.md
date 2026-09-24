@@ -22,7 +22,7 @@ npm run android
 
 This opens the root Expo app on the connected Android emulator/device. The app includes onboarding, five main tabs, WordPress content/details, year/subject feed matching, and persistent saved content. Remote push delivery remains pending. `matinf/` is an archived starter, not the active app.
 
-Start WordPress first and run `adb reverse tcp:9400 tcp:9400` so Android can reach it. The default backend is `http://127.0.0.1:9400`; set `EXPO_PUBLIC_WORDPRESS_URL` to the eventual public HTTPS site and rebuild for hosted use. The local preview explicitly allows loopback HTTP; public builds require HTTPS. See `.env.example`.
+The checked-in `.env` points to `https://sinisa.alwaysdata.net`; the hosted app needs internet access but no local WordPress server or port forwarding. For local backend work, set `EXPO_PUBLIC_WORDPRESS_URL=http://127.0.0.1:9400` in `.env.local`, start WordPress, and run `adb reverse tcp:9400 tcp:9400`. Restart Metro after changing the environment; standalone APKs must be rebuilt. Run `npx expo prebuild --platform android --no-install` when switching between local HTTP and public HTTPS so the Android network configuration is regenerated. Public builds disable cleartext HTTP. See `.env.example`.
 
 For the standalone emulator feasibility build:
 
@@ -40,12 +40,13 @@ node --test scripts/onboarding-model.test.mjs
 npm run test:wordpress
 node wordpress/scripts/check-site.mjs
 node wordpress/scripts/check-publishing.mjs
-node scripts/check-android-reader.mjs
-node scripts/check-android-reader.mjs --native
-node scripts/check-android-reader.mjs --native --targeting
+node wordpress/scripts/check-hosted.mjs
+node scripts/check-android-reader.mjs --hosted
+node scripts/check-android-reader.mjs --native --hosted
+node scripts/check-android-reader.mjs --native --hosted --targeting
 ```
 
-The browser check requires Google Chrome. The WordPress tests use a separate persistent test database, not the site's working content.
+The browser check requires Google Chrome. The WordPress tests use a separate persistent test database, not the site's working content. The Android checks expect the seeded demo catalog; omit `--hosted` only for a build using local WordPress (that mode also checks offline behavior by removing local port forwarding).
 
 ## Project map
 

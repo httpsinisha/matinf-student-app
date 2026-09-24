@@ -1,6 +1,6 @@
 # MATINF-inspired WordPress and Android information system
 
-Status: implementation underway. Local onboarding, the WordPress content/API/theme, Professor publishing, and the five-tab Android reader with personal feeds and caching are implemented. Public hosting, native push, and final-device acceptance remain open. See `docs/setup-status.md` and `wordpress/README.md` for evidence and commands.
+Status: implementation underway. Local onboarding, the WordPress content/API/theme, Professor publishing, and the five-tab Android reader with personal feeds and caching are implemented. WordPress is deployed at `https://sinisa.alwaysdata.net`; public HTTPS API checks and native emulator reading/targeting checks pass. Hosted authenticated publishing, native push, and final-device acceptance are tracked in `docs/setup-status.md`.
 
 Prepared: 18 September 2026. The user has approximately 20 days available; the exact submission date and daily working hours are not confirmed.
 

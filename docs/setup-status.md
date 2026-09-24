@@ -4,13 +4,17 @@ Updated: 24 September 2026.
 
 ## Public hosting trial
 
-Hosted check after corrected ZIP installation (24 September): MATINF theme and plugin are active, `/wp-json/matinf/v1/health` returns 200, and the catalog contains 6 programs, 34 courses, 6 staff, 1 document, and 8 feed posts. Course relationships and year-targeted/general-only feed filtering passed direct HTTP checks. Both HTTP and HTTPS PDF downloads return 200. A configuration issue remains: the core REST index reports `home=https://sinisa.alwaysdata.net` but `url=http://sinisa.alwaysdata.net`; the stored demo PDF URL also uses HTTP. Change WordPress Address to HTTPS and update the document file URL before connecting the public Android build. Hosted outbound push connectivity and Android access are still pending.
+HTTPS corrections confirmed on 24 September: both WordPress core URLs and the PDF metadata now use `https://sinisa.alwaysdata.net`. `node wordpress/scripts/check-hosted.mjs` passed HTTPS JSON, nonempty public collections, course relationships, year targeting/exclusion, 404 behavior, and PDF content checks. The root `.env` now selects this public backend; `.env.local` can override it for local work.
 
-The user selected alwaysdata Free on 24 September and provided `https://sinisa.alwaysdata.net/`. Direct Node HTTP checks confirmed the WordPress homepage and `/?rest_route=/` return 200 over HTTPS without a browser challenge. The standard API namespaces are present; `matinf/v1` is absent. `/wp-json/` returns a server 404, while `/index.php/wp-json/matinf/v1/health` reaches WordPress but returns `rest_no_route`. Plugin/theme installation and permalink configuration are the next steps. Deployment instructions are in `docs/hosting-setup.md`; the plugin/theme upload archives are prepared. Android connectivity and outbound HTTPS remain unverified. Local data and accounts remain intact; the app still uses the local backend until hosted acceptance passes.
+The hosted emulator APK built successfully in 15m 16s and was installed on `emulator-5554`. The packaged manifest was inspected with aapt2 and confirms `usesCleartextTraffic=false`; the bundled JavaScript contains the public HTTPS URL. No local WordPress port forwarding was present during acceptance. Five-tab navigation and staff/course/article/program/document details passed. The hosted year-targeted feed and selection persistence after native restart also passed. Screenshots are in `artifacts/reader-hosted/`; the current APK is `artifacts/build/MATINF-emulator-preview.apk` (46,660,392 bytes, x86_64 emulator only, debug signed). The emulator is left following the second year of Diplomirani matematičar i informatičar on the hosted site. The reader test now scrolls to an article because hosted seed timestamps can produce a different post order from local content. No hosted offline or physical Redmi test is claimed by these checks.
+
+MATINF theme and plugin are active, `/wp-json/matinf/v1/health` returns 200, and the hosted catalog contains 6 programs, 34 courses, 6 staff, 1 document, and 8 feed posts. The initial installation errors were traced to Windows ZIP entry separators and corrected in the packaging script. The initial permalink and HTTP URL configuration problems have also been resolved.
+
+The user selected alwaysdata Free on 24 September. Public API reads work without a browser challenge. Deployment instructions are in `docs/hosting-setup.md`. Local data and accounts remain intact; hosted users are separate. Authenticated hosted publishing, server-side outbound Expo connectivity, and real remote push delivery still need acceptance checks.
 
 ## Expanded app and Professor workflow
 
-The user expanded the scope to a full WordPress-backed reader and Professor/Administrator publishing. The app now has Početna, Notifikacije, Predmeti, Osoblje, and Više tabs, plus program/year navigation, rich article details, linked staff/courses/documents, public email, sharing, contact/about, and editable preferences based on WordPress IDs. Personal feeds use the REST audience filter. Lists and visited details are stored locally; confirmed 404 responses remove cached details. Hosting and remote push are still pending.
+The user expanded the scope to a full WordPress-backed reader and Professor/Administrator publishing. The app now has Početna, Notifikacije, Predmeti, Osoblje, and Više tabs, plus program/year navigation, rich article details, linked staff/courses/documents, public email, sharing, contact/about, and editable preferences based on WordPress IDs. Personal feeds use the REST audience filter. Lists and visited details are stored locally; confirmed 404 responses remove cached details. Hosted reading is verified above; remote push is still pending.
 
 Professor accounts use WordPress authentication, publish their own posts, and cannot manage other authors, academic records, accounts, or site settings. This implements direct publishing as the working default; an approval workflow was asked about but not confirmed. Administrators create accounts in Users → Add New and assign Profesor. Post targeting uses the MATINF metadata form; choose year/subject and uncheck the general-audience checkbox for targeted content.
 
@@ -25,7 +29,7 @@ Native targeting also passed: selecting the second year of Diplomirani matemati�
 - The name is **MATINF**.
 - There is no tight submission deadline; the older twenty-day schedule is no longer a constraint.
 - Use the currently connected Android device throughout development. ADB identifies it as `emulator-5554`; Redmi Note 8 Pro verification is deferred to the end at the user's request.
-- No hosting, Expo account, or Firebase project exists yet.
+- Alwaysdata Free hosting is active at `https://sinisa.alwaysdata.net`. Expo/Firebase project setup is still pending.
 - Use a free public host, rather than faculty hosting. The zero-cost/no-card constraint remains unchanged.
 
 ## Workspace and tooling
@@ -60,7 +64,7 @@ The first build was stopped after Gradle nearly exhausted its 512 MiB metadata a
 
 ## Remaining gates and next stages
 
-1. Obtain and verify a free public host, including direct API access and outbound HTTPS. HelioHost Johnny is the current candidate; no account or deployment has been fabricated.
+1. Complete alwaysdata acceptance: authenticated hosted publishing and server-side outbound Expo HTTPS. Public HTTPS API, PDF, and native Android reading/targeting checks pass.
 2. Configure user-owned Expo and Firebase projects, then prove a remote notification and detail routing in a native build. The local emulator APK and OS permission checks are complete.
 3. Add private installation registration and bounded notification dispatch/receipts, with focused authorization and audience-matching tests.
 4. Exercise hosted refresh, images, documents, and deleted-content handling against the eventual public backend. Local native navigation and persistent offline reading are verified.

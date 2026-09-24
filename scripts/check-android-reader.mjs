@@ -5,7 +5,8 @@ import { parseDocument } from 'htmlparser2';
 import assert from 'node:assert/strict';
 
 const adb = resolve(process.env.LOCALAPPDATA, 'Android/Sdk/platform-tools/adb.exe');
-const output = resolve('artifacts/reader');
+const hosted = process.argv.includes('--hosted');
+const output = resolve(hosted ? 'artifacts/reader-hosted' : 'artifacts/reader');
 const native = process.argv.includes('--native');
 const app = native ? 'com.matinf.demo' : 'host.exp.exponent';
 mkdirSync(output, { recursive: true });
@@ -58,6 +59,7 @@ async function scrollTo(text) {
   throw new Error(`Missing scrollable Android control: ${text}`);
 }
 async function verifyOffline() {
+  assert.ok(!hosted, 'Hosted offline checks require disconnecting device networking, not local port forwarding.');
   run('reverse', '--remove', 'tcp:9400');
   // Removing a forwarding rule does not close every pooled HTTP socket.
   // Restart the app to establish a fresh connection against the closed port.
@@ -69,7 +71,7 @@ async function verifyOffline() {
   await waitText('Prikazan je sačuvan sadržaj'); await waitText('Algoritmi i strukture podataka'); capture('offline-after-restart');
 }
 try {
-  run('reverse', 'tcp:9400', 'tcp:9400');
+  if (!hosted) run('reverse', 'tcp:9400', 'tcp:9400');
   launch();
   await waitText('Početna');
   if (process.argv.includes('--targeting')) {
@@ -109,17 +111,20 @@ try {
   await tap('Predmeti'); await waitText('Algoritmi i strukture podataka'); capture('courses');
   await tap('Algoritmi i strukture podataka'); await waitText('Pratite objave ovog predmeta'); capture('course-detail');
   run('shell', 'input', 'swipe', '550', '2050', '550', '600', '400'); await pause(600); capture('course-body');
-  await tap('Notifikacije'); await waitText('Sve objave'); await tap('Sve objave'); await waitText('Predstavite svoj studentski projekat'); capture('feed');
+  await tap('Notifikacije'); await waitText('Sve objave'); await tap('Sve objave'); await scrollTo('Predstavite svoj studentski projekat'); capture('feed');
   await tap('Predstavite svoj studentski projekat'); await waitText('Od ideje do rješenja'); capture('article');
   await tap('Više'); await waitText('Studijski programi'); capture('more');
-  console.log('Feed and article loaded; checking study hierarchy and offline cache.');
+  console.log('Feed and article loaded; checking study hierarchy and documents.');
   await tap('Studijski programi', true); await waitText('Diplomirani informatičar'); capture('studies');
   await tap('Diplomirani informatičar'); await waitText('O programu');
   run('shell', 'input', 'swipe', '550', '2050', '550', '600', '400'); await pause(600); capture('program-detail');
+  await tap('Više'); await waitText('Dokumenti'); await tap('Dokumenti', true);
+  await waitText('Primjer nastavnog plana (PDF)'); await tap('Primjer nastavnog plana (PDF)');
+  await waitText('Otvori dokument'); capture('document-detail');
   await tap('Predmeti'); await waitText('Algoritmi i strukture podataka');
-  await verifyOffline();
-  console.log('PASS: five tabs, live WordPress lists, course/profile/article/program details, and cached content after offline restart.');
+  if (!hosted) await verifyOffline();
+  console.log(hosted ? 'PASS: five tabs and hosted WordPress course/profile/article/program details.' : 'PASS: five tabs, live WordPress lists, course/profile/article/program details, and cached content after offline restart.');
   }
 } finally {
-  run('reverse', 'tcp:9400', 'tcp:9400');
+  if (!hosted) run('reverse', 'tcp:9400', 'tcp:9400');
 }
