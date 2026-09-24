@@ -7,7 +7,16 @@ export type Preferences = {
   permission: "granted" | "denied" | "unavailable" | "not-requested";
   syncStatus: "pending" | "not-needed";
   backend?: string;
+  selectedProgramId?: string;
 };
+
+// Older installations only saved followed years/courses. Restore their program too.
+export function restoreProgramId(preferences: Pick<Preferences, 'programYears' | 'courseIds' | 'selectedProgramId'> | null, programs: { id: string }[], courses: { id: string; programId: string }[]): string {
+  const candidates = [preferences?.selectedProgramId,
+    ...(preferences?.programYears ?? []).map(value => value.split(':')[0]),
+    ...(preferences?.courseIds ?? []).map(id => courses.find(course => course.id === id)?.programId)];
+  return candidates.find(id => programs.some(program => program.id === id)) ?? programs[0]?.id ?? '';
+}
 
 export function toggleSelection(values: string[], value: string): string[] {
   return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
@@ -21,6 +30,7 @@ export function parsePreferences(raw: string | null): Preferences | null {
       !Array.isArray(value.programYears) || !value.programYears.every((id: unknown) => typeof id === "string") ||
       !Array.isArray(value.courseIds) || !value.courseIds.every((id: unknown) => typeof id === "string") ||
       typeof value.notificationsRequested !== "boolean" ||
+      (value.selectedProgramId !== undefined && typeof value.selectedProgramId !== 'string') ||
       !["granted", "denied", "unavailable", "not-requested"].includes(value.permission) ||
       !["pending", "not-needed"].includes(value.syncStatus)) return null;
     return value;

@@ -217,3 +217,106 @@ test('authenticated REST publishing cannot bypass required academic metadata', a
   `);
   assert.deepEqual(statuses, [400, 400, 400]);
 });
+
+test('push registration protects each installation, validates preferences, rotates tokens, and opts out', async () => {
+  const id = '11111111-1111-4111-8111-111111111111';
+  const other = '22222222-2222-4222-8222-222222222222';
+  const secret = 'a'.repeat(64);
+  const put = (installation, key, changes = {}, method = 'PUT') => request(`${api}/push/installation/${installation}`, {
+    method, headers: { 'Content-Type': 'application/json', 'X-MATINF-Installation-Secret': key },
+    ...(method === 'PUT' ? { body: JSON.stringify({ token: 'ExpoPushToken[test_registration_12345]', programYears: [], courseIds: [], ...changes }) } : {}),
+  });
+  try {
+    assert.equal((await put(id, '')).status, 401);
+    assert.equal((await put(id, secret, { programYears: ['999999:4'] })).status, 400);
+    assert.equal((await put(id, secret)).status, 200);
+    assert.equal((await put(id, 'b'.repeat(64))).status, 403);
+    assert.equal((await put(other, secret)).status, 409);
+    assert.equal((await put(id, secret, { token: 'ExpoPushToken[test_rotated_12345678]' })).status, 200);
+    assert.equal((await put(id, 'b'.repeat(64), {}, 'DELETE')).status, 403);
+    assert.equal((await put(id, secret, {}, 'DELETE')).json.enabled, false);
+    assert.equal(await php(`global $wpdb; [$d] = matinf_push_tables(); echo wp_json_encode((int) $wpdb->get_var("SELECT enabled FROM $d WHERE installation='${id}'"));`), 0);
+    assert.equal((await request(`${api}/push/installation/${id}`)).status, 404);
+  } finally {
+    await php(`global $wpdb; [$d] = matinf_push_tables(); $wpdb->delete($d, ['installation' => '${id}']); $wpdb->delete($d, ['installation' => '${other}']); echo 'true';`);
+  }
+});
+
+test('push queue matches the feed, deduplicates publication, retries temporary failure, and processes receipts', async () => {
+  const result = await php(`
+    global $wpdb;
+    [$d, $j] = matinf_push_tables();
+    update_option('matinf_push_enabled', true);
+    $course = ${fixtures.course};
+    $year = get_post_meta($course, '_matinf_programId', true) . ':' . get_post_meta($course, '_matinf_year', true);
+    $ids = [];
+    foreach (['year' => ['programYears' => [$year]], 'course' => ['courseIds' => [$course]], 'general' => []] as $key => $preferences) {
+        $id = wp_generate_uuid4(); $ids[$key] = $id;
+        $token = 'ExpoPushToken[test_' . str_replace('-', '', $id) . ']';
+        $wpdb->insert($d, ['installation' => $id, 'secret_hash' => hash('sha256', $id), 'token' => $token, 'token_hash' => hash('sha256', $token), 'preferences' => wp_json_encode($preferences), 'updated_at' => time()]);
+    }
+    $post = wp_insert_post(['post_title' => 'Push fixture', 'post_status' => 'draft', 'post_category' => [get_term_by('slug', 'obavjestenja', 'category')->term_id]]);
+    try {
+        matinf_store_fields($post, matinf_validate_fields('post', ['audienceCourseIds' => [$course]]));
+        update_post_meta($post, '_matinf_send_push', true);
+        wp_update_post(['ID' => $post, 'post_status' => 'publish']);
+        matinf_push_first_publication($post);
+        $scheduled = (bool) wp_next_scheduled('matinf_push_enqueue', [$post]);
+        matinf_push_enqueue($post); matinf_push_enqueue($post);
+        $recipients = $wpdb->get_col($wpdb->prepare("SELECT installation FROM $j WHERE post_id=%d", $post));
+        $temporary = function () { return new WP_Error('http_request_failed', 'Simulated transport failure'); };
+        add_filter('pre_http_request', $temporary);
+        matinf_push_tick(); remove_filter('pre_http_request', $temporary);
+        $retry = $wpdb->get_results($wpdb->prepare("SELECT status,attempts FROM $j WHERE post_id=%d", $post), ARRAY_A);
+        $wpdb->query($wpdb->prepare("UPDATE $j SET due_at=0 WHERE post_id=%d", $post));
+        $sent = [];
+        $mock = function ($pre, $args, $url) use (&$sent) {
+            $body = json_decode($args['body'], true);
+            if (str_ends_with($url, '/send')) {
+                $sent = $body;
+                $data = array_map(function ($item) { return ['status' => 'ok', 'id' => hash('sha256', $item['to'])]; }, $body);
+            } else { $data = []; foreach ($body['ids'] as $id) $data[$id] = ['status' => 'ok']; }
+            return ['response' => ['code' => 200], 'headers' => [], 'body' => wp_json_encode(['data' => $data])];
+        };
+        add_filter('pre_http_request', $mock, 10, 3);
+        matinf_push_tick();
+        $waiting = $wpdb->get_col($wpdb->prepare("SELECT status FROM $j WHERE post_id=%d", $post));
+        $wpdb->query($wpdb->prepare("UPDATE $j SET due_at=0 WHERE post_id=%d", $post));
+        matinf_push_tick(); remove_filter('pre_http_request', $mock);
+        wp_update_post(['ID' => $post, 'post_title' => 'Edited push fixture']);
+        matinf_push_enqueue($post);
+        $statuses = $wpdb->get_col($wpdb->prepare("SELECT status FROM $j WHERE post_id=%d", $post));
+        echo wp_json_encode(['scheduled' => $scheduled, 'recipients' => $recipients, 'expected' => [$ids['year'], $ids['course']], 'retry' => $retry, 'waiting' => $waiting, 'statuses' => $statuses, 'payloads' => array_column($sent, 'data')]);
+    } finally {
+        delete_option('matinf_push_enabled'); wp_clear_scheduled_hook('matinf_push_enqueue', [$post]); wp_clear_scheduled_hook('matinf_push_tick');
+        $wpdb->delete($j, ['post_id' => $post]); foreach ($ids as $id) $wpdb->delete($d, ['installation' => $id]); wp_delete_post($post, true);
+    }
+  `);
+  assert.equal(result.scheduled, true);
+  assert.deepEqual(result.recipients.sort(), result.expected.sort());
+  assert.deepEqual(result.retry.map(item => [item.status, Number(item.attempts)]), [['pending', 1], ['pending', 1]]);
+  assert.deepEqual(result.waiting, ['receipt', 'receipt']);
+  assert.deepEqual(result.statuses, ['accepted', 'accepted']);
+  assert.ok(result.payloads.every(item => item.collection === 'announcements' && item.siteUrl === base && item.version === 1 && item.id > 0));
+});
+
+test('push cancels opted-out jobs and stale receipts do not disable rotated tokens', async () => {
+  const result = await php(`
+    global $wpdb; [$d, $j] = matinf_push_tables(); update_option('matinf_push_enabled', true);
+    $id = wp_generate_uuid4(); $token = 'ExpoPushToken[test_disabled_123456]';
+    $wpdb->insert($d, ['installation' => $id, 'secret_hash' => hash('sha256', $id), 'token' => $token, 'token_hash' => hash('sha256', $token), 'preferences' => '{}', 'updated_at' => time()]);
+    $post = wp_insert_post(['post_title' => 'Cancellation fixture', 'post_status' => 'publish', 'post_category' => [get_term_by('slug', 'novosti', 'category')->term_id]]);
+    matinf_push_enqueue($post); $wpdb->update($d, ['enabled' => 0], ['installation' => $id]);
+    $requests = 0; $mock = function () use (&$requests) { $requests++; return new WP_Error('unexpected', 'No sends expected'); }; add_filter('pre_http_request', $mock);
+    matinf_push_tick(); remove_filter('pre_http_request', $mock);
+    $status = $wpdb->get_var($wpdb->prepare("SELECT status FROM $j WHERE post_id=%d", $post));
+    $wpdb->update($d, ['enabled' => 1, 'token_hash' => hash('sha256', 'new-token')], ['installation' => $id]);
+    matinf_push_unregister_token((object) ['installation' => $id, 'token_hash' => hash('sha256', $token)]);
+    $rotated = (int) $wpdb->get_var($wpdb->prepare("SELECT enabled FROM $d WHERE installation=%s", $id));
+    matinf_push_unregister_token((object) ['installation' => $id, 'token_hash' => hash('sha256', 'new-token')]);
+    $invalid = (int) $wpdb->get_var($wpdb->prepare("SELECT enabled FROM $d WHERE installation=%s", $id));
+    $wpdb->delete($j, ['post_id' => $post]); $wpdb->delete($d, ['installation' => $id]); wp_delete_post($post, true); delete_option('matinf_push_enabled'); wp_clear_scheduled_hook('matinf_push_tick');
+    echo wp_json_encode(compact('requests', 'status', 'rotated', 'invalid'));
+  `);
+  assert.deepEqual(result, { requests: 0, status: 'cancelled', rotated: 1, invalid: 0 });
+});

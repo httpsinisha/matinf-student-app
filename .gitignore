@@ -50,4 +50,5 @@ example
 /wordpress/test-results/
 /google-services.json
 *service-account*.json
+*firebase-adminsdk*.json
 /artifacts/build/

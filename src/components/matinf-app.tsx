@@ -1,10 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, BackHandler, Image, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, BackHandler, Image, Linking, Pressable, RefreshControl, ScrollView, Share, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Catalog, Collection, Content, levelLabel, loadCatalog, Page, Related, siteUrl, useContent } from '@/lib/content-api';
 import { parsePreferences, Preferences } from '@/lib/onboarding-model';
+import { changePushPreference, usePush } from '@/lib/push';
+import type { PushDestination } from '@/lib/push-model';
 import { ContentBody, openUrl } from './content-body';
 import { OnboardingFlow } from './onboarding-flow';
 
@@ -40,6 +42,12 @@ function date(value: string) { return value ? new Date(value).toLocaleDateString
 function following(preferences: Preferences) {
   return `following=true&program_years=${encodeURIComponent(preferences.programYears.join(','))}&course_ids=${encodeURIComponent(preferences.courseIds.join(','))}`;
 }
+function followingLabel(preferences: Preferences, catalog: Catalog) {
+  return [...preferences.programYears.map(value => {
+    const [id, year] = value.split(':');
+    return `${catalog.programs.find(item => String(item.id) === id)?.title ?? 'Program ' + id} · ${year}. godina`;
+  }), ...preferences.courseIds.map(id => catalog.courses.find(item => String(item.id) === id)?.title ?? 'Predmet ' + id)].join('\n') || 'Samo opšta obavještenja. Izaberite godinu ili predmete.';
+}
 function Card({ item, navigate, compact = false }: { item: Content; navigate: Navigate; compact?: boolean }) {
   const staff = item.type === 'staff';
   return <Pressable accessibilityRole="button" accessibilityLabel={item.title} onPress={() => navigate({ collection: item.type, id: item.id })} style={({ pressed }) => [s.card, pressed && s.pressed]}>
@@ -69,6 +77,19 @@ export function MatinfApp() {
   const [setup, setSetup] = useState(false);
   const [tab, setTab] = useState<Tab>('home');
   const [stack, setStack] = useState<Screen[]>([]);
+  const [pushBusy, setPushBusy] = useState(false);
+  const openPush = useCallback((destination: PushDestination) => { setSetup(false); setTab('announcements'); setStack([destination]); }, []);
+  const push = usePush(preferences, openPush);
+  async function togglePush() {
+    if (!preferences || pushBusy) return;
+    setPushBusy(true);
+    try {
+      const next = await changePushPreference(preferences, !preferences.notificationsRequested);
+      await AsyncStorage.setItem('@matinf/onboarding/v1', JSON.stringify(next));
+      setPreferences(next);
+    } catch { Alert.alert('Obavještenja', 'Promjena nije sačuvana. Pokušajte ponovo.'); }
+    finally { setPushBusy(false); }
+  }
   const refreshCatalog = useCallback(async () => {
     setCatalogLoading(true);
     const key = `@matinf/catalog/v1:${siteUrl}`;
@@ -83,7 +104,7 @@ export function MatinfApp() {
   useEffect(() => {
     AsyncStorage.getItem('@matinf/onboarding/v1').then(raw => {
       const value = parsePreferences(raw);
-      setPreferences(value ? value.backend === siteUrl ? value : { ...value, programYears: [], courseIds: [], backend: siteUrl } : null);
+      setPreferences(value ? value.backend === siteUrl ? value : { ...value, selectedProgramId: undefined, programYears: [], courseIds: [], backend: siteUrl } : null);
     }).catch(() => undefined).finally(() => setReady(true));
     void refreshCatalog();
   }, [refreshCatalog]);
@@ -129,7 +150,7 @@ export function MatinfApp() {
     <View style={s.flex}>
       {screen ? screen.id ? <Detail key={`${screen.collection}/${screen.id}`} screen={screen} navigate={navigate} preferences={preferences} edit={edit} /> : <Listing key={`${screen.collection}/${screen.programId}/${screen.year}`} screen={screen} navigate={navigate} preferences={preferences} catalog={catalog} edit={edit} />
         : tab === 'home' ? <Home preferences={preferences} navigate={navigate} edit={edit} catalog={catalog} />
-          : tab === 'more' ? <More navigate={navigate} edit={edit} preferences={preferences} catalogError={catalogError} refreshCatalog={refreshCatalog} />
+          : tab === 'more' ? <More navigate={navigate} edit={edit} preferences={preferences} catalogError={catalogError} refreshCatalog={refreshCatalog} push={push} togglePush={togglePush} pushBusy={pushBusy} />
             : <Listing key={tab} screen={{ collection: tab }} navigate={navigate} preferences={preferences} catalog={catalog} edit={edit} />}
     </View>
     <View style={s.tabs}>{tabs.map(item => <Pressable key={item.key} accessibilityRole="tab" accessibilityState={{ selected: tab === item.key && !screen }} accessibilityLabel={item.name}
@@ -147,12 +168,13 @@ function Home({ preferences, navigate, edit, catalog }: { preferences: Preferenc
     <View style={s.welcome}><View><Text style={s.eyebrow}>VAŠ AKADEMSKI PROSTOR</Text><Text style={s.pageTitle}>Dobro došli.</Text></View><View style={s.welcomeIcon}><Icon name="sparkles-outline" size={29} /></View></View>
     <View style={s.hero}><View style={s.heroCircle} /><Text style={s.heroTag}>MATINF · INFORMACIJE NA DLANU</Text><Text style={s.heroTitle}>Znanje povezuje{ '\n' }ljude.</Text><Text style={s.heroText}>Sve o studijama, predmetima i ljudima{ '\n' }na jednom mjestu.</Text><Pressable accessibilityRole="button" onPress={() => navigate({ collection: 'programs' })} style={s.heroLink}><Text style={s.heroLinkText}>Istraži studijske programe</Text><Icon name="arrow-forward" color="white" size={20} /></Pressable></View>
     <View style={s.shortcuts}>{(['programs', 'courses', 'staff', 'documents'] as Collection[]).map(type => <Pressable key={type} accessibilityRole="button" onPress={() => navigate({ collection: type })} style={s.shortcut}><View style={s.shortcutIcon}><Icon name={icons[type]} /></View><Text style={s.shortcutLabel}>{type === 'programs' ? 'Studije' : type === 'staff' ? 'Osoblje' : labels[type]}</Text></Pressable>)}</View>
-    <Pressable accessibilityRole="button" onPress={edit} style={s.followCard}><Icon name="filter-outline" /><View style={s.flex}><Text style={s.followTitle}>Prilagođeno vama</Text><Text style={s.small}>{preferences.programYears.length || preferences.courseIds.length ? `${preferences.programYears.length} godina studija · ${preferences.courseIds.length} predmeta` : 'Izaberite godinu i predmete koje pratite.'}</Text></View><Icon name="chevron-forward" size={18} /></Pressable>
+    <Pressable accessibilityRole="button" onPress={edit} style={s.followCard}><Icon name="filter-outline" /><View style={s.flex}><Text style={s.followTitle}>Prilagođeno vama</Text><Text style={s.small}>{followingLabel(preferences, catalog)}</Text></View><Icon name="chevron-forward" size={18} /></Pressable>
     <Heading title="Najnovija obavještenja" onPress={() => navigate({ collection: 'announcements' })} />
     <Notice resource={notices} />
     {notices.data?.items.map(item => <Card key={item.id} item={item} navigate={navigate} />)}
     {!notices.loading && notices.data?.items.length === 0 && <Empty title="Sve ste pregledali" text="Trenutno nema objava za vaš izbor. Opšta obavještenja uvijek su uključena." />}
     <Heading title="Novosti sa sajta" onPress={() => navigate({ collection: 'news' })} />
+    <Text style={s.small}>Sve novosti, bez filtriranja prema vašem izboru studija.</Text>
     <Notice resource={news} />{news.data?.items.map(item => <Card key={item.id} item={item} navigate={navigate} compact />)}
     <View style={s.stats}><View><Text style={s.statValue}>{catalog.programs.length}</Text><Text style={s.small}>programa studija</Text></View><View style={s.statDivider} /><View><Text style={s.statValue}>{catalog.courses.length}</Text><Text style={s.small}>predmeta u katalogu</Text></View></View>
     <Text style={s.demo}>Nezvanična akademska demonstracija</Text>
@@ -170,9 +192,10 @@ function Listing({ screen, navigate, preferences, catalog, edit }: { screen: Scr
   return <ScrollView contentContainerStyle={s.page} refreshControl={<RefreshControl refreshing={resource.loading && !!resource.data} onRefresh={() => void resource.refresh()} />}>
     <Text style={s.eyebrow}>{collection === 'announcements' ? 'BUDITE U TOKU' : 'ISTRAŽITE MATINF'}</Text><Text style={s.pageTitle}>{labels[collection]}</Text>
     <Text style={s.description}>{collection === 'announcements' ? 'Objave profesora i administracije, prema vašem izboru studija i predmeta.' : collection === 'staff' ? 'Upoznajte nastavnike, njihove oblasti rada i predmete koje izvode.' : collection === 'courses' ? 'Nastavni sadržaji, povezani nastavnici i dokumenti za svaki predmet.' : collection === 'programs' ? 'Pronađite svoj put kroz osnovne, master i doktorske studije.' : collection === 'documents' ? 'Nastavni planovi i materijali dostupni sa sajta.' : 'Informacije iz naše akademske zajednice.'}</Text>
-    {collection === 'announcements' && <><View style={s.chipRow}><Chip title="Za mene" selected={personal} onPress={() => { setPersonal(true); setPage(1); }} /><Chip title="Sve objave" selected={!personal} onPress={() => { setPersonal(false); setPage(1); }} /><Chip title="Moj izbor" onPress={edit} /></View><Text style={s.small}>Ovo je feed objava. Push poruke još nisu povezane.</Text></>}
+    {collection === 'announcements' && <><View style={s.chipRow}><Chip title="Za mene" selected={personal} onPress={() => { setPersonal(true); setPage(1); }} /><Chip title="Sve objave" selected={!personal} onPress={() => { setPersonal(false); setPage(1); }} /><Chip title="Moj izbor" onPress={edit} /></View><Text style={s.small}>Objave možete pregledati i bez uključene push dostave.</Text></>}
     {collection === 'courses' && <><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipRow}><Chip title="Svi programi" selected={!program} onPress={() => { setProgram(0); setYear(0); setPage(1); }} />{catalog.programs.map(item => <Chip key={item.id} title={item.title} selected={program === item.id} onPress={() => { setProgram(item.id); setYear(0); setPage(1); }} />)}</ScrollView><View style={s.chipRow}><Chip title="Sve godine" selected={!year} onPress={() => { setYear(0); setPage(1); }} />{Array.from({ length: duration }, (_, index) => <Chip key={index} title={`${index + 1}.`} selected={year === index + 1} onPress={() => { setYear(index + 1); setPage(1); }} />)}</View></>}
     <Notice resource={resource} />
+    {collection === 'announcements' && personal && <View style={s.notice}><Text style={s.small}>Pratite:{'\n'}{followingLabel(preferences, catalog)}</Text></View>}
     {resource.data && <Text style={s.resultCount}>{resource.data.total} {collection === 'staff' ? 'profila' : 'stavki'} · Stranica {page}</Text>}
     {resource.data?.items.map(item => <Card key={item.id} item={item} navigate={navigate} />)}
     {!resource.loading && resource.data?.items.length === 0 && <Empty text={collection === 'announcements' ? 'Nema obavještenja za izabrane godine i predmete. Promijenite izbor ili pregledajte sve objave.' : 'Za ovaj izbor još nema objavljenog sadržaja.'} />}
@@ -208,7 +231,7 @@ function Detail({ screen, navigate, preferences, edit }: { screen: Screen; navig
   </ScrollView>;
 }
 
-function More({ navigate, edit, preferences, catalogError, refreshCatalog }: { navigate: Navigate; edit: () => void; preferences: Preferences; catalogError: boolean; refreshCatalog: () => Promise<void> }) {
+function More({ navigate, edit, preferences, catalogError, refreshCatalog, push, togglePush, pushBusy }: { navigate: Navigate; edit: () => void; preferences: Preferences; catalogError: boolean; refreshCatalog: () => Promise<void>; push: ReturnType<typeof usePush>; togglePush: () => void; pushBusy: boolean }) {
   const pages = useContent<Page>('/content/pages?per_page=50');
   function row(title: string, subtitle: string, icon: IconName, action: () => void) {
     return <Pressable key={title} accessibilityRole="button" onPress={action} style={s.relation}><View style={s.squareIcon}><Icon name={icon} /></View><View style={s.flex}><Text style={s.cardTitle}>{title}</Text><Text style={s.small}>{subtitle}</Text></View><Icon name="chevron-forward" size={18} color="#8c9ab0" /></Pressable>;
@@ -222,7 +245,10 @@ function More({ navigate, edit, preferences, catalogError, refreshCatalog }: { n
     <Notice resource={pages} />{pages.data?.items.map(item => row(item.title, item.excerpt.slice(0, 70), item.slug === 'kontakt' ? 'mail-outline' : 'information-circle-outline', () => navigate({ collection: 'pages', id: item.id })))}
     <Heading title="Vaša aplikacija" />
     {row('Praćenje i obavještenja', `${preferences.programYears.length} godina · ${preferences.courseIds.length} predmeta`, 'options-outline', edit)}
-    <View style={s.notice}><Icon name="information-circle-outline" /><View style={s.flex}><Text style={s.noticeTitle}>Vaš izbor je sačuvan na uređaju</Text><Text style={s.small}>Feed se prilagođava vašem izboru. {preferences.permission === 'granted' ? 'Android dozvola je odobrena. ' : ''}Push dostava još nije povezana sa servisom za obavještenja.</Text></View></View>
+    <View style={s.notice}><Icon name="notifications-outline" /><View style={s.flex}><Text style={s.noticeTitle}>Push obavještenja</Text><Text accessibilityLiveRegion="polite" style={s.small}>{push.message}</Text><Text style={s.small}>Izbor studija i predmeta ostaje sačuvan i kada isključite push.</Text></View></View>
+    <Pressable accessibilityRole="button" disabled={pushBusy} onPress={togglePush} style={s.action}><Text style={s.actionText}>{pushBusy ? 'Čuvanje…' : preferences.notificationsRequested ? 'Isključi push obavještenja' : 'Uključi push obavještenja'}</Text></Pressable>
+    {['error', 'stopping', 'paused'].includes(push.status) && <Action title="Pokušaj povezivanje ponovo" secondary onPress={push.retry} />}
+    {push.status === 'denied' && <Action title="Otvori Android podešavanja" secondary onPress={() => void Linking.openSettings()} />}
     {catalogError && row('Osvježi studijski katalog', 'Veza sa sajtom nije uspjela', 'refresh-outline', () => void refreshCatalog())}
     {row('Otvori WordPress sajt', 'Javni sadržaj i prijava za nastavnike', 'globe-outline', () => void openUrl(siteUrl))}
     <View style={s.about}><Icon name="school" size={38} /><Text style={s.aboutTitle}>MATINF</Text><Text style={s.centerText}>Matematika. Informatika. Budućnost.</Text><Text style={s.demo}>Nezvanična akademska demonstracija{ '\n' }Verzija 1.0.0 · Sadržaj uređivan u WordPress-u</Text></View>

@@ -2,6 +2,22 @@
 
 Updated: 24 September 2026.
 
+## Push implementation — activation and acceptance underway
+
+Expo project `370f402c-255a-4990-b120-39a8812ea99c` and Firebase project `matinf-e8e3b` were supplied by the user. The ignored root `google-services.json` matches `com.matinf.demo`; the Android emulator has Google Play services. A separate private RSA-2048/SHA256 upload JKS and local password file were generated under ignored `artifacts/build/` because Expo rejected the initial development keystore. No private Firebase key has been read or stored in source control. The user confirmed Expo accepted the new JKS and Firebase key. This is not yet a real delivery test.
+
+Plugin 0.2.0 adds authenticated-per-installation registrations, validated subscriptions, opt-out, first-publication push opt-in, a deduplicated durable queue, temporary-error retries, Expo receipts, invalid-token cleanup, and administrator diagnostics. The app adds SecureStore-backed installation credentials, Expo token registration/rotation, preference synchronization, opt-out, real connection status, foreground presentation, and article navigation from warm/cold notification taps. Setup and limits are in `docs/push-setup.md`.
+
+All 14 WordPress integration cases pass across the full run and a targeted rerun: the first run had 12 passes and two HTTP timeouts while native compilation and unused Metro servers competed for memory; both timed-out cases passed after those servers were stopped. Queue/receipt tests use intercepted HTTP, not real delivery. Six model tests and TypeScript validation pass. Native testing exposed SDK 57's token event on every token fetch; a regression-tested listener now ignores unchanged tokens, preventing repeated registration. The first Firebase native build passed in 24m 55s; the corrected build passed in 2m 20s and was installed. The portable plugin ZIP has eight verified files; a versioned copy is `wordpress/dist/matinf-core-0.2.0.zip`.
+
+The hosted health endpoint now reports plugin 0.2.0, public reader/PDF checks pass, and an unauthenticated registration returns the expected 401. Hosted HTTPS probe, recurring cron, and real notification/tap acceptance are still pending; no live delivery is claimed yet.
+
+## Study selection correction
+
+The Professor's hosted post 73, “Obavještenje za studente informatike”, is published with audience `21:4` (Diplomirani matematičar i informatičar, fourth year). Public REST checks include it for `21:4` and exclude it for `30:4` (Diplomirani informatičar, fourth year). Both categories are supported; the unfiltered website-news section also includes it. The hosted post has not been modified by the coding agent.
+
+The preferences editor now restores the selected program, migrates older records by inferring the program from followed years/courses, separates undergraduate/master/doctoral programs, and saves edits with an explicit “Sačuvaj izbor” button while preserving notification permission settings. Android Back cancels unsaved edits. Home and the personal feed display actual program/year/course names, and website news explains its unfiltered scope. TypeScript and four model tests pass. `node scripts/check-android-reader.mjs --native --hosted --preferences` passed on emulator-5554: program and fourth-year checkboxes are restored without reselecting the program after process restart; master/doctoral tabs show their programs; Back cancels an unsaved program change; the personal feed names the saved selection. Screenshots `artifacts/reader-hosted/preferences-*.png` were visually inspected. The updated emulator APK built successfully (final build 3m 43s). The saved program is now Diplomirani informatičar, fourth year; existing individual course subscriptions are preserved. No hosted audience edit was made.
+
 ## Public hosting trial
 
 HTTPS corrections confirmed on 24 September: both WordPress core URLs and the PDF metadata now use `https://sinisa.alwaysdata.net`. `node wordpress/scripts/check-hosted.mjs` passed HTTPS JSON, nonempty public collections, course relationships, year targeting/exclusion, 404 behavior, and PDF content checks. The root `.env` now selects this public backend; `.env.local` can override it for local work.

@@ -90,7 +90,13 @@ function matinf_audience_box($post) {
     }
     echo '</select></p>';
     matinf_relation_select($post, 'audienceCourseIds', 'Pojedinačni predmeti', 'mf_course');
-    echo '<p>Za ciljanu objavu isključite „Opšta objava za sve“. Pratilac godine vidi i objave njenih predmeta. Bez izabrane publike objava je opšta. Objavljeni sadržaj je javan; izbor određuje lični feed, ne pravo pristupa. Push dostava još nije povezana.</p>';
+    echo '<p>Za ciljanu objavu isključite „Opšta objava za sve“. Pratilac godine vidi i objave njenih predmeta. Bez izabrane publike objava je opšta. Objavljeni sadržaj je javan; izbor određuje lični feed, ne pravo pristupa.</p>';
+    if (get_post_meta($post->ID, '_matinf_push_seen', true) || $post->post_status === 'publish') {
+        echo '<p>Push se šalje samo pri prvom objavljivanju. Izmjene ne šalju ponovo.</p>';
+    } else {
+        $send = metadata_exists('post', $post->ID, '_matinf_send_push') ? (bool) get_post_meta($post->ID, '_matinf_send_push', true) : true;
+        echo '<p><label><input type="checkbox" name="matinf[sendPush]" value="1" ' . checked($send, true, false) . '> Pošalji push obavještenje izabranoj publici pri prvom objavljivanju</label></p>';
+    }
 }
 
 // The account determines the role; selecting a label never grants privileges.

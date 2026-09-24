@@ -2,16 +2,18 @@
 /**
  * Plugin Name: MATINF Core
  * Description: Academic content, validated relationships and the public MATINF mobile API.
- * Version: 0.1.0
+ * Version: 0.2.0
  * Requires at least: 6.8
  * Requires PHP: 8.2
  * License: GPL-2.0-or-later
  * Text Domain: matinf
  */
 defined('ABSPATH') || exit;
-define('MATINF_VERSION', '0.1.0');
+define('MATINF_VERSION', '0.2.0');
 require_once __DIR__ . '/includes/content.php';
 require_once __DIR__ . '/includes/publishing.php';
+require_once __DIR__ . '/includes/push.php';
+require_once __DIR__ . '/includes/push-admin.php';
 require_once __DIR__ . '/includes/rest.php';
 require_once __DIR__ . '/includes/admin.php';
 require_once __DIR__ . '/includes/demo.php';

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, BackHandler, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { siteUrl } from "@/lib/content-api";
-import { parsePreferences, Preferences, toggleSelection } from "@/lib/onboarding-model";
+import { parsePreferences, Preferences, restoreProgramId, toggleSelection } from "@/lib/onboarding-model";
 import { OnboardingScreen } from "./onboarding-screen";
 
 const storageKey = "@matinf/onboarding/v1";
@@ -36,11 +36,14 @@ export function OnboardingFlow({ programs, courses, onDone, onCancel, editMode =
   const busyRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const scroll = useRef<ScrollView>(null);
+  const levels = [...new Set(['Osnovne studije', 'Master studije', 'Doktorske studije', ...programs.map(item => item.level)])].filter(level => programs.some(item => item.level === level));
+  const orderedPrograms = levels.flatMap(level => programs.filter(item => item.level === level));
 
   useEffect(() => {
     AsyncStorage.getItem(storageKey).then((raw) => {
       const value = parsePreferences(raw);
       setSaved(value);
+      setProgramId(restoreProgramId(value?.backend === siteUrl ? value : null, orderedPrograms, courses));
       if (value?.backend === siteUrl) {
         setProgramYears(value.programYears.filter(id => programs.some(program => id.startsWith(program.id + ':') && Number(id.split(':')[1]) <= program.years)));
         setCourseIds(value.courseIds.filter(id => courses.some(course => course.id === id)));
@@ -53,6 +56,7 @@ export function OnboardingFlow({ programs, courses, onDone, onCancel, editMode =
     const listener = BackHandler.addEventListener("hardwareBackPress", () => {
       if (busyRef.current) return true;
       if (saved && !editing) return false;
+      if (editing && step === 1) { onCancel?.(); return true; }
       if (step > 0) { setStep((value) => value - 1); return true; }
       if (editing) { onCancel?.(); return true; }
       return false;
@@ -62,7 +66,7 @@ export function OnboardingFlow({ programs, courses, onDone, onCancel, editMode =
 
   useEffect(() => { scroll.current?.scrollTo({ y: 0, animated: false }); }, [step]);
 
-  async function finish(requestNotifications: boolean, clearSelections = false) {
+  async function finish(requestNotifications: boolean, clearSelections = false, preserveNotifications = false) {
     if (busyRef.current) return;
     busyRef.current = true;
     setBusy(true);
@@ -91,7 +95,8 @@ export function OnboardingFlow({ programs, courses, onDone, onCancel, editMode =
         courseIds: clearSelections ? [] : courseIds,
         notificationsRequested: requestNotifications, permission,
         syncStatus: requestNotifications ? "pending" : "not-needed",
-        backend: siteUrl,
+        backend: siteUrl, selectedProgramId: programId,
+        ...(preserveNotifications && saved ? { notificationsRequested: saved.notificationsRequested, permission: saved.permission, syncStatus: saved.syncStatus } : {}),
       };
       await AsyncStorage.setItem(storageKey, JSON.stringify(value));
       setSaved(value);
@@ -129,7 +134,7 @@ export function OnboardingFlow({ programs, courses, onDone, onCancel, editMode =
       {!complete && <Pressable accessibilityRole="button" onPress={() => editMode && step === 1 ? onCancel?.() : setStep((value) => Math.max(0, value - 1))} disabled={busy} style={styles.back}>
         <Text style={styles.link}>‹  Nazad</Text>
       </Pressable>}
-      <Text style={styles.eyebrow}>{complete ? "DOBRO DOŠLI" : `KORAK ${step + 1} OD 3`}</Text>
+      <Text style={styles.eyebrow}>{complete ? "DOBRO DOŠLI" : editMode ? "PODEŠAVANJA PRAĆENJA" : `KORAK ${step + 1} OD 3`}</Text>
       <Text accessibilityRole="header" style={styles.title}>{complete ? "Sve je spremno\nza početak." : step === 1 ? "Šta želite\nda pratite?" : "Budite u toku."}</Text>
       <Text style={styles.description}>{complete
         ? "Vaš izbor je sačuvan na ovom uređaju. Možete ga promijeniti u bilo kom trenutku."
@@ -141,7 +146,7 @@ export function OnboardingFlow({ programs, courses, onDone, onCancel, editMode =
           <Text style={styles.cardTitle}>Vaša podešavanja</Text>
           <Text style={styles.cardText}>Godine studija: {saved.programYears.length}{"\n"}Pojedinačni predmeti: {saved.courseIds.length}</Text>
           <Text style={styles.cardText}>{!saved.notificationsRequested ? "Obavještenja su isključena."
-            : saved.permission === "granted" ? "Dozvola za obavještenja je odobrena. Vaš izbor čeka povezivanje sa servisom za obavještenja."
+            : saved.permission === "granted" ? "Dozvola za obavještenja je odobrena. Status povezivanja dostupan je u odjeljku Više."
               : saved.permission === "denied" ? "Obavještenja nisu dozvoljena. Dozvolu možete promijeniti u podešavanjima uređaja."
                 : "Dozvola za obavještenja trenutno nije dostupna. Vaš izbor je sačuvan."}</Text>
         </View>
@@ -153,15 +158,28 @@ export function OnboardingFlow({ programs, courses, onDone, onCancel, editMode =
         <Button title="Pogledaj uvod" secondary onPress={() => { setStep(0); setEditing(true); }} />
         <Text style={styles.demo}>Nezvanična akademska demonstracija</Text>
       </> : step === 1 ? <>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Vaš izbor za praćenje</Text>
+          {programYears.map(id => { const [pid, year] = id.split(':'); return <Text key={id} style={styles.cardText}>{programs.find(item => item.id === pid)?.name ?? pid} · {year}. godina</Text>; })}
+          {courseIds.map(id => <Text key={id} style={styles.cardText}>{courses.find(item => item.id === id)?.name ?? id}</Text>)}
+          {!selectionCount && <Text style={styles.cardText}>Samo opšta obavještenja. Označite godinu ili predmet ispod.</Text>}
+          <Text style={styles.hint}>Promjene se primjenjuju kada sačuvate izbor.</Text>
+          {editMode && <Button title={busy ? "Čuvanje…" : "Sačuvaj izbor"} disabled={busy} onPress={() => void finish(false, false, true)} />}
+        </View>
+        <Text style={styles.section}>Nivo studija</Text>
+        <View style={styles.years}>{levels.map(level => <Pressable key={level} accessibilityRole="tab" accessibilityState={{ selected: program?.level === level }}
+          onPress={() => setProgramId(restoreProgramId({ selectedProgramId: programId, programYears, courseIds }, programs.filter(item => item.level === level), courses))}
+          style={[styles.year, program?.level === level && styles.selected]}><Text style={styles.programName}>{level}</Text></Pressable>)}</View>
         <Text style={styles.section}>Studijski program</Text>
-        <Text style={styles.hint}>Programi i predmeti preuzeti sa MATINF sajta.</Text>
+        <Text style={styles.hint}>Izaberite program, zatim označite godinu ili predmete koje pratite.</Text>
         {!programs.length && <Text style={styles.error}>Katalog trenutno nije dostupan. Možete nastaviti bez izbora i podesiti praćenje kasnije.</Text>}
-        {programs.map((item) => <Pressable key={item.id} accessibilityRole="radio" accessibilityState={{ checked: programId === item.id }}
+        {programs.filter(item => item.level === program?.level).map((item) => <Pressable key={item.id} accessibilityLabel={item.name} accessibilityRole="radio" accessibilityState={{ checked: programId === item.id }}
           onPress={() => setProgramId(item.id)} style={[styles.program, programId === item.id && styles.selected]}>
           <View style={{ flex: 1 }}><Text style={styles.programName}>{item.name}</Text><Text style={styles.hint}>{item.level}</Text></View>
           <View style={[styles.radio, programId === item.id && styles.radioSelected]} />
         </Pressable>)}
         <Text style={styles.section}>Godina studija</Text>
+        <Text style={styles.programName}>{program?.name}</Text>
         <Text style={styles.hint}>Praćenje godine uključuje njene predmete.</Text>
         <View style={styles.years}>{Array.from({ length: program?.years || 0 }, (_, i) => i + 1).map((year) => {
           const id = `${program!.id}:${year}`;
@@ -183,8 +201,13 @@ export function OnboardingFlow({ programs, courses, onDone, onCancel, editMode =
           </Pressable>;
         })}
         <Text accessibilityLiveRegion="polite" style={styles.selectionSummary}>Izabrano: {programYears.length} godina studija · {courseIds.length} predmeta</Text>
-        <Button title="Nastavi" onPress={() => setStep(2)} />
-        <Button title="Preskoči izbor" secondary onPress={() => { setProgramYears([]); setCourseIds([]); setStep(2); }} />
+        {editMode ? <>
+          <Button title={busy ? "Čuvanje…" : "Sačuvaj izbor"} disabled={busy} onPress={() => void finish(false, false, true)} />
+          <Button title="Podešavanja dozvole za obavještenja" secondary disabled={busy} onPress={() => setStep(2)} />
+        </> : <>
+          <Button title="Nastavi" onPress={() => setStep(2)} />
+          <Button title="Preskoči izbor" secondary onPress={() => { setProgramYears([]); setCourseIds([]); setStep(2); }} />
+        </>}
       </> : <>
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Vaš izbor</Text>
