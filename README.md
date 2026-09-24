@@ -20,7 +20,9 @@ npm ci
 npm run android
 ```
 
-This opens the root Expo app on the connected Android emulator/device. Onboarding works locally; the remaining reader screens and live notification subscription integration are pending. `matinf/` is an archived starter, not the active app.
+This opens the root Expo app on the connected Android emulator/device. The app includes onboarding, five main tabs, WordPress content/details, year/subject feed matching, and persistent saved content. Remote push delivery remains pending. `matinf/` is an archived starter, not the active app.
+
+Start WordPress first and run `adb reverse tcp:9400 tcp:9400` so Android can reach it. The default backend is `http://127.0.0.1:9400`; set `EXPO_PUBLIC_WORDPRESS_URL` to the eventual public HTTPS site and rebuild for hosted use. The local preview explicitly allows loopback HTTP; public builds require HTTPS. See `.env.example`.
 
 For the standalone emulator feasibility build:
 
@@ -37,6 +39,10 @@ npx tsc --noEmit
 node --test scripts/onboarding-model.test.mjs
 npm run test:wordpress
 node wordpress/scripts/check-site.mjs
+node wordpress/scripts/check-publishing.mjs
+node scripts/check-android-reader.mjs
+node scripts/check-android-reader.mjs --native
+node scripts/check-android-reader.mjs --native --targeting
 ```
 
 The browser check requires Google Chrome. The WordPress tests use a separate persistent test database, not the site's working content.

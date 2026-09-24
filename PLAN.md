@@ -1,6 +1,6 @@
 # MATINF-inspired WordPress and Android information system
 
-Status: implementation underway. The local onboarding and first WordPress content/API/theme milestone are implemented; public hosting, native push, mobile reader integration, and final-device acceptance remain open. See `docs/setup-status.md` and `wordpress/README.md` for evidence and commands.
+Status: implementation underway. Local onboarding, the WordPress content/API/theme, Professor publishing, and the five-tab Android reader with personal feeds and caching are implemented. Public hosting, native push, and final-device acceptance remain open. See `docs/setup-status.md` and `wordpress/README.md` for evidence and commands.
 
 Prepared: 18 September 2026. The user has approximately 20 days available; the exact submission date and daily working hours are not confirmed.
 

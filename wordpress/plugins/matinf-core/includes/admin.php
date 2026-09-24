@@ -75,6 +75,10 @@ add_action('save_post', function ($id, $post) {
         return;
     }
     matinf_store_fields($id, $fields);
+    if ($post->post_type === 'post' && !has_category(['novosti', 'obavjestenja'], $id)) {
+        $category = get_term_by('slug', 'obavjestenja', 'category');
+        if ($category) wp_set_post_categories($id, [$category->term_id], true);
+    }
 }, 10, 2);
 
 add_action('admin_notices', function () {

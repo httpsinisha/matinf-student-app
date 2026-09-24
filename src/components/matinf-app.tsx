@@ -87,6 +87,19 @@ export function MatinfApp() {
     }).catch(() => undefined).finally(() => setReady(true));
     void refreshCatalog();
   }, [refreshCatalog]);
+  useEffect(() => {
+    if (!preferences || catalogLoading || catalogError || !catalog.programs.length) return;
+    const programYears = preferences.programYears.filter(value => {
+      const [id, year] = value.split(':').map(Number);
+      return catalog.programs.some(item => item.id === id && year >= 1 && year <= (item.meta.durationYears || 0));
+    });
+    const courseIds = preferences.courseIds.filter(id => catalog.courses.some(item => String(item.id) === id));
+    if (programYears.length !== preferences.programYears.length || courseIds.length !== preferences.courseIds.length) {
+      const next = { ...preferences, programYears, courseIds };
+      setPreferences(next);
+      void AsyncStorage.setItem('@matinf/onboarding/v1', JSON.stringify(next)).catch(() => undefined);
+    }
+  }, [catalog, catalogLoading, catalogError, preferences]);
   const goBack = useCallback(() => { setStack(value => value.slice(0, -1)); }, []);
   useEffect(() => {
     if (setup || !preferences) return;

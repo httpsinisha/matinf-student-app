@@ -34,7 +34,7 @@ The admin sidebar contains Studijski programi, Predmeti, Nastavno osoblje, and D
 
 Invalid academic metadata is rejected. An attempted invalid publication is kept as a draft with an admin notice; existing valid metadata remains intact. Drafts, private/password-protected posts, and unpublished relationships are omitted from the mobile API.
 
-Tools → MATINF demo can add the sample content to an empty installation. Seeding is additive: existing slugs and administrator edits are preserved. The demo contains all six programs, twelve representative courses, three fictional staff profiles, five sample posts, two information pages, and a generated PDF stored in WordPress Media. It is not an official curriculum.
+Tools → MATINF demo can add the sample content to an empty installation. Seeding is additive: existing slugs and administrator edits are preserved. The demo contains all six programs, 34 representative courses, six fictional staff profiles, eight sample posts, two information pages, and a generated PDF stored in WordPress Media. It is not an official curriculum.
 
 ## Public API
 
@@ -76,11 +76,14 @@ To restore locally, stop WordPress; preserve the current `.runtime/site` under a
 
 ## What is still pending
 
-Public hosting, HTTPS and outbound Expo-request checks; Expo/Firebase project configuration; private installation registration; notification queue/receipts; mobile content/cache integration; and the final Redmi build. See [setup decisions](../docs/setup-status.md) and [hosting steps](../docs/hosting-setup.md). The local site is a working development milestone, not a claim that those external-service gates are complete.
-# Professors and targeted publishing
+Public hosting, HTTPS and outbound Expo-request checks; Expo/Firebase project configuration; private installation registration; notification queue/receipts; and the final Redmi build. See [setup decisions](../docs/setup-status.md) and [hosting steps](../docs/hosting-setup.md). Mobile reading and caching are implemented against the local site; external-service gates remain open.
+
+## Professors and targeted publishing
 
 Open `/prijava/` to sign in as an Administrator or Professor. Administrators add accounts through **Users → Add New**, assigning the **Profesor** role. The login form does not allow self-selected privileges. Professors can publish and edit their own posts and upload media; academic catalogs, other authors' posts, settings, and users remain under Administrator control.
 
 When writing a post, choose **Novosti** or **Obavještenja**. In **MATINF podaci**, select the program/year and/or subjects. Uncheck **Opšta objava za sve** for a targeted post. Leaving all targets empty makes the post general. Publishing makes it available to the Android REST reader on refresh; matching study-year followers also see their subjects' posts. These are public posts with a personalized feed, not private classroom content. OS push delivery is not yet connected.
+
+Posts saved through the MATINF form without either category are added to **Obavještenja** automatically. On a fresh WordPress installation, keep the unneeded default Sample Page as a draft before demonstrating the app; the reader intentionally includes published information pages.
 
 `node wordpress/scripts/check-publishing.mjs` checks an Administrator-created temporary Professor, actual login and form publication, and the matching REST feed. It cleans up its temporary user/post afterward and seeds the additive demo catalog.
