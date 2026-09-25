@@ -45,6 +45,11 @@ example
 # Local WordPress runtime, database, credentials and generated packages
 /wordpress/.runtime/
 /wordpress/.test-runtime/
+/wordpress/.catalog-test-runtime/
+/artifacts/pdf-tools/
+/artifacts/catalog-source/
+/artifacts/catalog-web/
+/artifacts/matinf-source.html
 /wordpress/.env
 /wordpress/dist/
 /wordpress/test-results/

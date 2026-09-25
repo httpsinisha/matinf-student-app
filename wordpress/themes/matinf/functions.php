@@ -22,6 +22,8 @@ function matinf_theme_navigation() {
         if ($url) $links[$url] = $label;
     }
     $contact = get_page_by_path('kontakt');
+    $schedule = get_page_by_path('raspored');
+    if ($schedule && $schedule->post_status === 'publish') $links[get_permalink($schedule)] = 'Raspored';
     if ($contact && $contact->post_status === 'publish') $links[get_permalink($contact)] = 'Kontakt';
     foreach ($links as $url => $label) echo '<a href="' . esc_url($url) . '">' . esc_html($label) . '</a>';
 }

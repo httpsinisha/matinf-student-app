@@ -60,7 +60,8 @@ function matinf_meta_box($post) {
         echo '<p><label><input type="checkbox" name="matinf[important]" value="1" ' . checked((bool) get_post_meta($post->ID, '_matinf_important', true), true, false) . '> Važno obavještenje</label></p>';
         echo '<p>Izaberite kategoriju <strong>Novosti</strong> ili <strong>Obavještenja</strong> da objava bude dostupna aplikaciji.</p>';
     }
-    if (in_array($post->post_type, ['mf_program', 'mf_course', 'post'], true)) matinf_relation_select($post, 'documentIds', 'Povezani dokumenti', 'mf_document');
+    if ($post->post_type === 'post') matinf_attachments_box($post);
+    elseif (in_array($post->post_type, ['mf_program', 'mf_course'], true)) matinf_relation_select($post, 'documentIds', 'Povezani dokumenti', 'mf_document');
 }
 
 add_action('save_post', function ($id, $post) {

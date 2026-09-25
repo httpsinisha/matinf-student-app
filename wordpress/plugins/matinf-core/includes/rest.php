@@ -35,6 +35,14 @@ function matinf_content_item($post, $collection, $detail = false) {
     if ($collection === 'staff') $meta = ['academicTitle' => $read('academicTitle'), 'email' => $read('email')];
     if ($collection === 'documents') $meta = ['fileUrl' => esc_url_raw($read('fileUrl'), ['https', 'http']), 'mimeType' => $read('mimeType')];
     if (in_array($collection, ['news', 'announcements'], true)) $meta = ['important' => (bool) $read('important'), 'audience' => matinf_post_audience($id), 'authorName' => get_the_author_meta('display_name', $post->post_author)];
+    if (in_array($collection, ['news', 'announcements'], true)) {
+        $meta['attachments'] = [];
+        foreach ((array) $read('attachmentIds') as $file_id) {
+            if (get_post_type($file_id) !== 'attachment' || get_post_status($file_id) === 'trash') continue;
+            $url = wp_get_attachment_url($file_id);
+            if ($url) $meta['attachments'][] = ['id' => (int) $file_id, 'title' => get_the_title($file_id), 'url' => esc_url_raw($url), 'mimeType' => get_post_mime_type($file_id)];
+        }
+    }
     if ($detail && in_array($collection, ['programs', 'staff'], true)) {
         $args = ['post_type' => 'mf_course', 'post_status' => 'publish', 'has_password' => false, 'posts_per_page' => 50, 'orderby' => 'title', 'order' => 'ASC'];
         if ($collection === 'programs') $args['meta_query'] = [['key' => '_matinf_programId', 'value' => $id, 'type' => 'NUMERIC']];

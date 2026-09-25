@@ -8,7 +8,7 @@ export type Related = { id: number; title: string; type: Collection; url: string
 export type Content = Related & {
   slug: string; excerpt: string; bodyHtml: string; publishedAt: string; updatedAt: string;
   image: { url: string; alt: string } | null;
-  meta: { important?: boolean; authorName?: string; level?: string; durationYears?: number; ects?: number; programId?: number; year?: number; semester?: number; academicTitle?: string; email?: string; fileUrl?: string; mimeType?: string; audience?: { everyone: boolean; programYears: string[]; courseIds: number[] } };
+  meta: { attachments?: { id: number; title: string; url: string; mimeType: string }[]; important?: boolean; authorName?: string; level?: string; durationYears?: number; ects?: number; programId?: number; year?: number; semester?: number; academicTitle?: string; email?: string; fileUrl?: string; mimeType?: string; audience?: { everyone: boolean; programYears: string[]; courseIds: number[] } };
   relations: { program?: Related; staff?: Related[]; courses?: Related[]; documents?: Related[] };
 };
 export type Page = { items: Content[]; total: number; totalPages: number; page: number; perPage: number };

@@ -75,6 +75,16 @@ function matinf_validate_fields($type, $input) {
         $output = ['fileUrl' => $url, 'mimeType' => sanitize_mime_type($input['mimeType'] ?? 'application/pdf')];
     }
     if ($type === 'post') {
+        $ids = $input['attachmentIds'] ?? [];
+        if (!is_array($ids) || count($ids) > 20) return new WP_Error('matinf_files', 'Najviše 20 dokumenata uz objavu.', ['status' => 400]);
+        $output['attachmentIds'] = [];
+        foreach ($ids as $id) {
+            if (filter_var($id, FILTER_VALIDATE_INT) === false || (int) $id <= 0) return new WP_Error('matinf_file', 'Neispravan identifikator datoteke.', ['status' => 400]);
+            $attachment = get_post((int) $id);
+            if (!$attachment || $attachment->post_type !== 'attachment' || $attachment->post_status === 'trash' || !current_user_can('edit_post', $attachment->ID) || !wp_get_attachment_url($attachment->ID)) return new WP_Error('matinf_file', 'Odaberite svoju učitanu datoteku iz Medija.', ['status' => 400]);
+            $output['attachmentIds'][] = $attachment->ID;
+        }
+        $output['attachmentIds'] = array_values(array_unique($output['attachmentIds']));
         $output['important'] = !empty($input['important']);
         $audience = matinf_validate_audience($input);
         if (is_wp_error($audience)) return $audience;

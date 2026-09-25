@@ -1,6 +1,14 @@
 # Setup decisions and implementation status
 
-Updated: 24 September 2026.
+Updated: 25 September 2026.
+
+## Official catalog, publishing attachments and timetable
+
+Core 0.3.0 and theme 0.2.0 implement grouped checkbox audiences (undergraduate/master/doctoral), native WordPress media uploads attached directly to posts, and a resumable administrator catalog import. Public curriculum tables were fetched from matinf.pmf.unibl.org and converted to 174 course/option records across six programs, including 132 undergraduate records, with year/semester, ECTS, teaching hours, elective grouping and original syllabus/source links. The 35 staff names are fictional; their roles follow the public staffing structure. The weekly schedule uses invented times/rooms/assignments and an explicitly illustrative elective choice for all 24 undergraduate program/year/semester combinations. See `docs/catalog-and-schedule.md` for provenance, limitations and hosting steps.
+
+Catalog integration tests passed for preserved program IDs, exact sampled facts, idempotency, all timetable cohorts without overlaps, grouped audiences and media ownership validation. A real local browser check passed: a Professor uploaded a PDF, selected multiple targets, published, and the API returned a downloadable PDF and correctly filtered feeds. TypeScript and eight model tests pass. The first timetable UI check exposed opening the screen before the catalog finished loading; initialization now responds when the catalog arrives. Further UI and native verification are in progress.
+
+The hosted site still reported Core 0.2.1 at the last check. New ZIPs were prepared and supplied to the user; remote activation/import has not been performed by the assistant. Imported content is not bundled into the APK: it comes from WordPress after the administrator runs the import.
 
 ## Clearer following selection and effective course totals
 

@@ -89,7 +89,8 @@ function matinf_push_register($request) {
 function matinf_push_matches($post_id, $preferences) {
     $request = new WP_REST_Request();
     $request['program_years'] = implode(',', $preferences['programYears'] ?? []);
-    $request['course_ids'] = implode(',', $preferences['courseIds'] ?? []);
+    // An archived course must not invalidate the device's other subscriptions.
+    $request['course_ids'] = implode(',', array_filter($preferences['courseIds'] ?? [], fn($id) => matinf_is_public((int) $id, 'mf_course')));
     $query = matinf_feed_query($request);
     if (is_wp_error($query)) return false;
     return (bool) get_posts(['post_type' => 'post', 'post_status' => 'publish', 'has_password' => false, 'include' => [$post_id], 'fields' => 'ids', 'meta_query' => $query]);

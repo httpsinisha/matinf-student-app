@@ -1,5 +1,7 @@
 # MATINF-inspired WordPress and Android information system
 
+Update, 25 September 2026: the user now requests the official MATINF program/course catalog (especially undergraduate studies), renamed fictional staff, a demonstrative weekly timetable selectable in the app, grouped multi-audience publishing and direct document uploads in the post editor. This supersedes the earlier representative/sample curriculum scope below. Facts come from the public curriculum tables; external full syllabi remain linked to their official sources. Timetable times and teaching assignments are explicitly fictional. Implementation and deployment instructions: `docs/catalog-and-schedule.md`.
+
 Status: implementation underway. Local onboarding, the WordPress content/API/theme, Professor publishing, and the five-tab Android reader with personal feeds and caching are implemented. WordPress is deployed at `https://sinisa.alwaysdata.net`; public HTTPS API checks and native emulator reading/targeting checks pass. Hosted authenticated publishing, native push, and final-device acceptance are tracked in `docs/setup-status.md`.
 
 Prepared: 18 September 2026. The user has approximately 20 days available; the exact submission date and daily working hours are not confirmed.

@@ -81,15 +81,7 @@ function matinf_feed_query($request) {
 function matinf_audience_box($post) {
     $audience = matinf_post_audience($post->ID);
     echo '<h3>Publika u Android aplikaciji</h3><p><label><input type="checkbox" name="matinf[everyone]" value="1" ' . checked($audience['everyone'], true, false) . '> Opšta objava za sve</label></p>';
-    echo '<p><label for="mf-audienceYears"><strong>Program i godina studija</strong></label><br><select class="widefat" id="mf-audienceYears" name="matinf[audienceYears][]" multiple size="6">';
-    foreach (get_posts(['post_type' => 'mf_program', 'post_status' => 'publish', 'has_password' => false, 'numberposts' => -1]) as $program) {
-        for ($year = 1; $year <= (int) get_post_meta($program->ID, '_matinf_durationYears', true); $year++) {
-            $value = $program->ID . ':' . $year;
-            echo '<option value="' . esc_attr($value) . '" ' . selected(in_array($value, $audience['programYears'], true), true, false) . '>' . esc_html($program->post_title . ' · ' . $year . '. godina') . '</option>';
-        }
-    }
-    echo '</select></p>';
-    matinf_relation_select($post, 'audienceCourseIds', 'Pojedinačni predmeti', 'mf_course');
+    matinf_audience_choices($audience);
     echo '<p>Za ciljanu objavu isključite „Opšta objava za sve“. Pratilac godine vidi i objave njenih predmeta. Bez izabrane publike objava je opšta. Objavljeni sadržaj je javan; izbor određuje lični feed, ne pravo pristupa.</p>';
     if (get_post_meta($post->ID, '_matinf_push_seen', true) || $post->post_status === 'publish') {
         echo '<p>Push se šalje samo pri prvom objavljivanju. Izmjene ne šalju ponovo.</p>';

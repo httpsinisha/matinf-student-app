@@ -9,12 +9,13 @@ import { changePushPreference, useDismissPostNotifications, usePush } from '@/li
 import type { PushDestination } from '@/lib/push-model';
 import { ContentBody, openUrl } from './content-body';
 import { OnboardingFlow } from './onboarding-flow';
+import { ScheduleScreen } from './schedule-screen';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 type Tab = 'home' | 'announcements' | 'courses' | 'staff' | 'more';
-type Screen = { collection: Collection; id?: number; programId?: number; year?: number };
+type Screen = { collection: Collection | 'schedule'; id?: number; programId?: number; year?: number };
 type Navigate = (screen: Screen) => void;
-const labels: Record<Collection, string> = { news: 'Novosti', announcements: 'Notifikacije', programs: 'Studijski programi', courses: 'Predmeti', staff: 'Nastavno osoblje', documents: 'Dokumenti', pages: 'Informacije' };
+const labels: Record<Collection | 'schedule', string> = { schedule: 'Raspored nastave', news: 'Novosti', announcements: 'Notifikacije', programs: 'Studijski programi', courses: 'Predmeti', staff: 'Nastavno osoblje', documents: 'Dokumenti', pages: 'Informacije' };
 const icons: Record<Collection, IconName> = { news: 'newspaper-outline', announcements: 'notifications-outline', programs: 'school-outline', courses: 'book-outline', staff: 'people-outline', documents: 'document-text-outline', pages: 'information-circle-outline' };
 const tabs: { key: Tab; name: string; icon: IconName }[] = [
   { key: 'home', name: 'Početna', icon: 'home-outline' }, { key: 'announcements', name: 'Notifikacije', icon: 'notifications-outline' },
@@ -148,7 +149,7 @@ export function MatinfApp() {
       <Pressable accessibilityRole="button" accessibilityLabel="Podesi praćenje" onPress={edit} style={s.headerButton}><Icon name="options-outline" color="#142b52" /></Pressable>
     </View>
     <View style={s.flex}>
-      {screen ? screen.id ? <Detail key={`${screen.collection}/${screen.id}`} screen={screen} navigate={navigate} preferences={preferences} edit={edit} /> : <Listing key={`${screen.collection}/${screen.programId}/${screen.year}`} screen={screen} navigate={navigate} preferences={preferences} catalog={catalog} edit={edit} />
+      {screen?.collection === 'schedule' ? <ScheduleScreen catalog={catalog} preferences={preferences} openCourse={id => navigate({ collection: 'courses', id })} /> : screen ? screen.id ? <Detail key={`${screen.collection}/${screen.id}`} screen={screen} navigate={navigate} preferences={preferences} edit={edit} /> : <Listing key={`${screen.collection}/${screen.programId}/${screen.year}`} screen={screen} navigate={navigate} preferences={preferences} catalog={catalog} edit={edit} />
         : tab === 'home' ? <Home preferences={preferences} navigate={navigate} edit={edit} catalog={catalog} />
           : tab === 'more' ? <More navigate={navigate} edit={edit} preferences={preferences} catalogError={catalogError} refreshCatalog={refreshCatalog} push={push} togglePush={togglePush} pushBusy={pushBusy} />
             : <Listing key={tab} screen={{ collection: tab }} navigate={navigate} preferences={preferences} catalog={catalog} edit={edit} />}
@@ -169,6 +170,7 @@ function Home({ preferences, navigate, edit, catalog }: { preferences: Preferenc
     <View style={s.hero}><View style={s.heroCircle} /><Text style={s.heroTag}>MATINF · INFORMACIJE NA DLANU</Text><Text style={s.heroTitle}>Znanje povezuje{ '\n' }ljude.</Text><Text style={s.heroText}>Sve o studijama, predmetima i ljudima{ '\n' }na jednom mjestu.</Text><Pressable accessibilityRole="button" onPress={() => navigate({ collection: 'programs' })} style={s.heroLink}><Text style={s.heroLinkText}>Istraži studijske programe</Text><Icon name="arrow-forward" color="white" size={20} /></Pressable></View>
     <View style={s.shortcuts}>{(['programs', 'courses', 'staff', 'documents'] as Collection[]).map(type => <Pressable key={type} accessibilityRole="button" onPress={() => navigate({ collection: type })} style={s.shortcut}><View style={s.shortcutIcon}><Icon name={icons[type]} /></View><Text style={s.shortcutLabel}>{type === 'programs' ? 'Studije' : type === 'staff' ? 'Osoblje' : labels[type]}</Text></Pressable>)}</View>
     <Pressable accessibilityRole="button" onPress={edit} style={s.followCard}><Icon name="filter-outline" /><View style={s.flex}><Text style={s.followTitle}>Prilagođeno vama</Text><Text style={s.small}>{followingLabel(preferences, catalog)}</Text></View><Icon name="chevron-forward" size={18} /></Pressable>
+    <Action title="Moj raspored nastave" onPress={() => navigate({ collection: 'schedule' })} />
     <Heading title="Najnovija obavještenja" onPress={() => navigate({ collection: 'announcements' })} />
     <Notice resource={notices} />
     {notices.data?.items.map(item => <Card key={item.id} item={item} navigate={navigate} />)}
@@ -221,6 +223,7 @@ function Detail({ screen, navigate, preferences, edit }: { screen: Screen; navig
       {item.type === 'programs' && <View style={s.infoStrip}><Icon name="school-outline" /><Text style={s.infoText}>{levelLabel[item.meta.level || '']} · {item.meta.durationYears} godine · {item.meta.ects} ECTS</Text></View>}
       {item.type === 'courses' && <><View style={s.infoStrip}><Icon name="calendar-outline" /><Text style={s.infoText}>{item.meta.year}. godina · {item.meta.semester}. semestar</Text></View>{item.relations.program && relation(item.relations.program)}<Pressable accessibilityRole="button" onPress={edit} style={s.followCard}><Icon name={subscribed ? 'checkmark-circle' : 'notifications-outline'} color={subscribed ? '#148356' : '#2057ce'} /><View style={s.flex}><Text style={s.followTitle}>{subscribed ? 'Pratite ovaj predmet' : 'Pratite objave ovog predmeta'}</Text><Text style={s.small}>Promijenite izbor godina i predmeta</Text></View><Icon name="chevron-forward" size={18} /></Pressable></>}
       <View style={s.bodyCard}><ContentBody html={item.bodyHtml} /></View>
+      {!!item.meta.attachments?.length && <><Heading title="Dokumenti uz objavu" />{item.meta.attachments.map(file => <Action key={file.id} title={`Otvori: ${file.title}`} onPress={() => void openUrl(file.url)} />)}</>}
       {item.type === 'programs' && <><Heading title="Godine studija" />{Array.from({ length: item.meta.durationYears || 0 }, (_, index) => <Pressable key={index} accessibilityRole="button" onPress={() => navigate({ collection: 'courses', programId: item.id, year: index + 1 })} style={s.relation}><View style={s.yearNumber}><Text style={s.blue}>{index + 1}</Text></View><Text style={[s.cardTitle, s.flex]}>{index + 1}. godina studija</Text><Icon name="chevron-forward" size={18} /></Pressable>)}</>}
       {!!item.relations.staff?.length && <><Heading title="Nastavno osoblje" />{item.relations.staff.map(relation)}</>}
       {!!item.relations.courses?.length && item.type !== 'programs' && <><Heading title="Predmeti" />{item.relations.courses.map(relation)}</>}
@@ -240,6 +243,7 @@ function More({ navigate, edit, preferences, catalogError, refreshCatalog, push,
   return <ScrollView contentContainerStyle={s.page}>
     <Text style={s.eyebrow}>SVE NA JEDNOM MJESTU</Text><Text style={s.pageTitle}>Istražite više.</Text><Text style={s.description}>Studijske informacije, materijali i vaša podešavanja.</Text>
     <Heading title="Informacije" />
+    {row('Moj raspored', 'Program, godina, semestar i sedmični termini', 'calendar-outline', () => navigate({ collection: 'schedule' }))}
     {row('Studijski programi', 'Osnovne, master i doktorske studije', 'school-outline', () => navigate({ collection: 'programs' }))}
     {row('Novosti', 'Aktuelnosti iz akademske zajednice', 'newspaper-outline', () => navigate({ collection: 'news' }))}
     {row('Dokumenti', 'Nastavni planovi i materijali', 'document-text-outline', () => navigate({ collection: 'documents' }))}

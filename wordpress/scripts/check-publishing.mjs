@@ -5,7 +5,7 @@ import { resolve } from 'node:path';
 import assert from 'node:assert/strict';
 import { projectRoot } from './runtime.mjs';
 
-const base = 'http://127.0.0.1:9400';
+const base = process.env.MATINF_TEST_URL || 'http://127.0.0.1:9400';
 const output = resolve(projectRoot, '../artifacts/wordpress');
 await mkdir(output, { recursive: true });
 const browser = await chromium.launch({ channel: 'chrome', headless: true });
@@ -14,12 +14,12 @@ const publicJson = async path => {
   assert.equal(response.status, 200);
   return response.json();
 };
-let userId, postId, admin, nonce, adminId, editor;
+let userId, postId, fileId, admin, nonce, adminId, editor;
 try {
   admin = await browser.newContext();
   const page = await admin.newPage();
   page.setDefaultTimeout(60000);
-  const credentials = JSON.parse(await readFile(resolve(projectRoot, '.runtime/local-admin.json'), 'utf8'));
+  const credentials = JSON.parse(await readFile(resolve(projectRoot, process.env.MATINF_TEST_STORAGE || '.runtime', 'local-admin.json'), 'utf8'));
   await page.goto(`${base}/prijava/`);
   assert.match(await page.locator('h1').innerText(), /Prijava/);
   await page.screenshot({ path: resolve(output, 'professor-login.png'), fullPage: true });
@@ -53,7 +53,23 @@ try {
   const courses = await publicJson('/wp-json/matinf/v1/content/courses');
   const course = courses.items[0];
   await editor.locator('input[name="matinf[everyone]"]').uncheck();
-  await editor.locator('#mf-audienceCourseIds').selectOption(String(course.id));
+  const target = editor.locator(`input[name="matinf[audienceCourseIds][]"][value="${course.id}"]`);
+  await target.evaluate(node => { node.closest('details').open = true; });
+  await target.check();
+  const second = courses.items[1];
+  const otherTarget = editor.locator(`input[name="matinf[audienceCourseIds][]"][value="${second.id}"]`);
+  await otherTarget.evaluate(node => { node.closest('details').open = true; });
+  await otherTarget.check();
+  const years = [...new Set([`${course.meta.programId}:${course.meta.year}`, `${second.meta.programId}:${second.meta.year}`])];
+  for (const year of years) await editor.locator(`input[name="matinf[audienceYears][]"][value="${year}"]`).check();
+  await editor.locator('#mf-upload-files').click();
+  const uploadTab = editor.getByRole('tab', { name: 'Upload files', exact: true });
+  if (await uploadTab.isVisible()) await uploadTab.click();
+  const pdf = Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 300 300]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF');
+  await editor.locator('input[type="file"]').last().setInputFiles({ name: 'matinf-upload-check.pdf', mimeType: 'application/pdf', buffer: pdf });
+  await editor.getByRole('button', { name: 'Dodaj dokumente', exact: true }).click();
+  fileId = Number(await editor.locator('#mf-attachments input').inputValue());
+  assert.ok(fileId > 0);
   const category = editor.locator('#categorychecklist label').filter({ hasText: 'Obavještenja' });
   await category.locator('input').check();
   // WordPress disables this button with a CSS class during title autosave.
@@ -66,12 +82,17 @@ try {
   const item = await publicJson(`/wp-json/matinf/v1/content/announcements/${postId}`);
   assert.equal(item.title, 'Provjera objave profesora — ciljani predmet');
   assert.equal(item.meta.audience.everyone, false);
-  assert.deepEqual(item.meta.audience.courseIds, [course.id]);
+  assert.deepEqual(item.meta.audience.courseIds.sort(), [course.id, second.id].sort());
+  assert.deepEqual(item.meta.audience.programYears.sort(), years.sort());
+  assert.equal(item.meta.attachments[0].id, fileId);
+  const downloaded = await fetch(item.meta.attachments[0].url);
+  assert.equal(downloaded.status, 200);
+  assert.ok((await downloaded.text()).startsWith('%PDF'));
   const targeted = await publicJson(`/wp-json/matinf/v1/content/feed?following=true&program_years=${course.meta.programId}:${course.meta.year}&per_page=50`);
   const general = await publicJson('/wp-json/matinf/v1/content/feed?following=true&per_page=50');
   assert.ok(targeted.items.some(post => post.id === postId));
   assert.ok(!general.items.some(post => post.id === postId));
-  console.log('PASS: Administrator creates Professor; Professor signs in and publishes own targeted post; REST year feed includes it and unrelated/general-only feed excludes it.');
+  console.log('PASS: Professor uploads PDF and publishes multiple audience choices; REST exposes attachment and filters the post correctly.');
 } catch (error) {
   if (editor) {
     await editor.screenshot({ path: resolve(output, 'professor-publish-error.png'), fullPage: true });
@@ -86,6 +107,7 @@ try {
   if (admin && nonce) {
     const headers = { 'X-WP-Nonce': nonce };
     if (postId) assert.equal((await admin.request.delete(`${base}/wp-json/wp/v2/posts/${postId}?force=true`, { headers })).status(), 200);
+    if (fileId) assert.equal((await admin.request.delete(`${base}/wp-json/wp/v2/media/${fileId}?force=true`, { headers })).status(), 200);
     if (userId) assert.equal((await admin.request.delete(`${base}/wp-json/wp/v2/users/${userId}?force=true&reassign=${adminId}`, { headers })).status(), 200);
   }
   await browser.close();

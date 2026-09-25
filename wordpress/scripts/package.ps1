@@ -39,6 +39,6 @@ function New-WordPressPackage($source, $destination, $requiredFiles) {
     Write-Output "Verified $folderName archive: $($files.Count) files with portable ZIP paths."
 }
 
-New-WordPressPackage (Join-Path $wordpressRoot 'plugins/matinf-core') (Join-Path $packageOutput 'matinf-core.zip') @('matinf-core.php', 'includes/rest.php', 'includes/push.php', 'includes/push-admin.php')
+New-WordPressPackage (Join-Path $wordpressRoot 'plugins/matinf-core') (Join-Path $packageOutput 'matinf-core.zip') @('matinf-core.php', 'includes/rest.php', 'includes/push.php', 'includes/push-admin.php', 'includes/catalog.php', 'includes/editor.php', 'includes/schedule.php', 'assets/editor.js', 'assets/catalog-import.js', 'data/catalog.json')
 New-WordPressPackage (Join-Path $wordpressRoot 'themes/matinf') (Join-Path $packageOutput 'matinf-theme.zip') @('style.css', 'index.php', 'functions.php')
 Write-Output "Upload packages created in $packageOutput"
