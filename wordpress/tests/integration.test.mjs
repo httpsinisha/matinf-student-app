@@ -19,6 +19,10 @@ const api = '/wp-json/matinf/v1';
 before(async () => {
   site = await startWordPress({ port: 9410, storage: '.test-runtime' });
   fixtures = await php(`
+    // Recover this test's fixtures after an interrupted local run.
+    foreach (['Integration fixture draft', 'Integration fixture private', 'Integration fixture publish', 'Unsafe integration fixture'] as $title) {
+      foreach (get_posts(['post_type' => ['mf_program', 'page'], 'post_status' => ['draft', 'private', 'publish'], 'numberposts' => -1, 'title' => $title]) as $stale) wp_delete_post($stale->ID, true);
+    }
     $ids = [];
     foreach (['draft', 'private', 'publish'] as $status) {
       $ids[$status] = wp_insert_post(['post_type' => 'mf_program', 'post_title' => 'Integration fixture ' . $status, 'post_status' => $status, 'post_password' => $status === 'publish' ? 'private-fixture' : '']);

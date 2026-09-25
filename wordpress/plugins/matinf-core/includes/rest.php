@@ -32,7 +32,7 @@ function matinf_content_item($post, $collection, $detail = false) {
         $relations['program'] = $program ? matinf_summary($program) : null;
         $relations['staff'] = matinf_related($id, 'staffIds', 'mf_staff');
     }
-    if ($collection === 'staff') $meta = ['academicTitle' => $read('academicTitle'), 'email' => $read('email')];
+    if ($collection === 'staff') $meta = ['academicTitle' => $read('academicTitle'), 'email' => $read('email'), 'staffGroup' => matinf_staff_group($id)];
     if ($collection === 'documents') $meta = ['fileUrl' => esc_url_raw($read('fileUrl'), ['https', 'http']), 'mimeType' => $read('mimeType')];
     if (in_array($collection, ['news', 'announcements'], true)) $meta = ['important' => (bool) $read('important'), 'audience' => matinf_post_audience($id), 'authorName' => get_the_author_meta('display_name', $post->post_author)];
     if (in_array($collection, ['news', 'announcements'], true)) {

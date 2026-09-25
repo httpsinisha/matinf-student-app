@@ -41,6 +41,14 @@ Struktura 35 profila prati javni pregled nastavnika i saradnika, uključujući g
 
 ## Raspored
 
+### Dopuna 0.4.0 / tema 0.3.1
+
+Nakon zamjene oba ZIP paketa otvoriti **Alati → MATINF studentski sadržaj → Dopuni kontakte i studentske priče**. Katalog nije potrebno ponovo uvoziti. Dopuna čuva postojeće kontakte i ne prepisuje već napravljenu stranicu sa pričama. Prazni kontakti dobijaju adrese `example.org`, koje ne primaju poštu; stvarni kontakti uređuju se u profilima osoblja.
+
+Raspored sada vraća i `exams` za izabranu godinu i `graduateExams` za sve godine programa. Redovni rokovi: januar/februar, jun/jul i septembar 2027; apsolventski: oktobar, novembar i decembar 2026. Termini se deterministički računaju iz objavljenih predmeta, isključuju vikende, praksu i završni rad. U okviru programa nema istovremenih termina. Izborne opcije su uključene. Ovo je popunjen demonstracijski kalendar, bez administrativnog uređivača termina i bez provjere prava studenta da polaže ispit. Pravo na apsolventski rok nije izvedeno iz izbora četvrte godine. Učionice su vidljive uz nastavu i ispite.
+
+Osoblje je grupisano kao Rukovodioci, Nastavnici i Saradnici. Prva tri uvezena profila predstavljaju rukovodioce; ostali se grupišu po zvanju. Stranica `studentske-price` sadrži tri izmišljene priče i dostupna je iz navigacije i početne stranice sajta, te iz **Više** u aplikaciji. Na zahtjev korisnika nisu dodavane pojedinačne oznake „primjer“ u prikazima. Prilozi objava su ispod tijela teksta na oba klijenta.
+
 Android: **Početna → Moj raspored nastave** ili **Više → Moj raspored**. Izabrati osnovni program, godinu i zimski/ljetni semestar, pa pregledati sedmicu ili određeni dan. Izbor se pamti na uređaju odvojeno od pretplata za obavještenja. Dodir termina otvara predmet. Ranije učitan raspored se čuva za prikaz bez mreže.
 
 Sajt: `/raspored/`, isti REST podaci i izbori. Endpoint: `GET /wp-json/matinf/v1/schedule?program_id=ID&year=1&semester=1`.

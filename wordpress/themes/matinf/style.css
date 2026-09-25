@@ -1,7 +1,7 @@
 /*
 Theme Name: MATINF
 Description: A light, responsive academic demonstration theme for MATINF Core.
-Version: 0.2.0
+Version: 0.3.1
 Requires at least: 6.8
 Requires PHP: 8.2
 License: GPL-2.0-or-later
@@ -17,3 +17,6 @@ Text Domain: matinf
 #loginform input[type=text],#loginform input[type=password] {box-sizing:border-box;width:100%;border:1px solid #d8e2f2;border-radius:10px;padding:13px;font:inherit}
 #loginform .login-remember label {font-weight:400}
 #loginform input[type=submit] {border:0;background:#2057ce;color:white;border-radius:10px;padding:13px 24px;font:inherit;font-weight:600;cursor:pointer}
+
+.table-scroll{overflow-x:auto;margin:20px 0 36px}.schedule-table{width:100%;min-width:650px;border-collapse:collapse;font-size:14px}.schedule-table th,.schedule-table td{padding:13px;text-align:left;border-bottom:1px solid #dde5f0}.schedule-table th{background:#edf3ff;color:#173b79}.staff-group{margin:36px 0}.staff-contact{overflow-wrap:anywhere}.article:has(.schedule-table){min-width:0}.detail:has(.schedule-table){grid-template-columns:1fr}.detail:has(.schedule-table)>.sidebar{display:none}
+.article:has(.schedule-table) form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:32px}.article:has(.schedule-table) form label{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:14px;color:var(--muted)}.article:has(.schedule-table) form label:first-child{grid-column:1/-1}.article:has(.schedule-table) form select{width:100%;min-width:0;border:1px solid var(--line);border-radius:10px;padding:10px;background:white;color:var(--navy)}.article:has(.schedule-table) form button{grid-column:1/-1;border:0;cursor:pointer}.staff-avatar{display:grid;place-items:center;width:58px;height:58px;background:var(--pale);border-radius:50%;font-size:22px;font-weight:700;color:var(--blue);margin-bottom:18px}

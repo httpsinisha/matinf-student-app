@@ -189,7 +189,7 @@ function Listing({ screen, navigate, preferences, catalog, edit }: { screen: Scr
   const [program, setProgram] = useState(screen.programId || 0);
   const [year, setYear] = useState(screen.year || 0);
   const [page, setPage] = useState(1);
-  const resource = useContent<Page>(`/content/${collection === 'announcements' ? 'feed' : collection}?per_page=15&page=${page}${collection === 'announcements' && personal ? '&' + following(preferences) : ''}${collection === 'courses' && program ? '&program_id=' + program : ''}${collection === 'courses' && year ? '&year=' + year : ''}`);
+  const resource = useContent<Page>(`/content/${collection === 'announcements' ? 'feed' : collection}?per_page=${collection === 'staff' ? 50 : 15}&page=${page}${collection === 'announcements' && personal ? '&' + following(preferences) : ''}${collection === 'courses' && program ? '&program_id=' + program : ''}${collection === 'courses' && year ? '&year=' + year : ''}`);
   const duration = catalog.programs.find(item => item.id === program)?.meta.durationYears || 4;
   return <ScrollView contentContainerStyle={s.page} refreshControl={<RefreshControl refreshing={resource.loading && !!resource.data} onRefresh={() => void resource.refresh()} />}>
     <Text style={s.eyebrow}>{collection === 'announcements' ? 'BUDITE U TOKU' : 'ISTRAŽITE MATINF'}</Text><Text style={s.pageTitle}>{labels[collection]}</Text>
@@ -199,7 +199,7 @@ function Listing({ screen, navigate, preferences, catalog, edit }: { screen: Scr
     <Notice resource={resource} />
     {collection === 'announcements' && personal && <View style={s.notice}><Text style={s.small}>Pratite:{'\n'}{followingLabel(preferences, catalog)}</Text></View>}
     {resource.data && <Text style={s.resultCount}>{resource.data.total} {collection === 'staff' ? 'profila' : 'stavki'} · Stranica {page}</Text>}
-    {resource.data?.items.map(item => <Card key={item.id} item={item} navigate={navigate} />)}
+    {collection === 'staff' ? ['Rukovodioci', 'Nastavnici', 'Saradnici'].map(group => <View key={group}><Heading title={group} />{resource.data?.items.filter(item => (item.meta.staffGroup || (/saradnik|asistent/i.test(item.meta.academicTitle || '') ? 'Saradnici' : 'Nastavnici')) === group).map(item => <View key={item.id}><Card item={item} navigate={navigate} />{item.meta.email && <Pressable accessibilityRole="link" onPress={() => void openUrl('mailto:' + item.meta.email)} style={s.websiteLink}><Text style={s.blue}>{item.meta.email}</Text></Pressable>}</View>)}</View>) : resource.data?.items.map(item => <Card key={item.id} item={item} navigate={navigate} />)}
     {!resource.loading && resource.data?.items.length === 0 && <Empty text={collection === 'announcements' ? 'Nema obavještenja za izabrane godine i predmete. Promijenite izbor ili pregledajte sve objave.' : 'Za ovaj izbor još nema objavljenog sadržaja.'} />}
     {!!resource.data && resource.data.totalPages > 1 && <View style={s.pagination}>{page > 1 && <Action title="← Prethodna" secondary onPress={() => setPage(page - 1)} />}{page < resource.data.totalPages && <Action title="Sljedeća →" onPress={() => setPage(page + 1)} />}</View>}
   </ScrollView>;
@@ -247,7 +247,7 @@ function More({ navigate, edit, preferences, catalogError, refreshCatalog, push,
     {row('Studijski programi', 'Osnovne, master i doktorske studije', 'school-outline', () => navigate({ collection: 'programs' }))}
     {row('Novosti', 'Aktuelnosti iz akademske zajednice', 'newspaper-outline', () => navigate({ collection: 'news' }))}
     {row('Dokumenti', 'Nastavni planovi i materijali', 'document-text-outline', () => navigate({ collection: 'documents' }))}
-    <Notice resource={pages} />{pages.data?.items.map(item => row(item.title, item.excerpt.slice(0, 70), item.slug === 'kontakt' ? 'mail-outline' : 'information-circle-outline', () => navigate({ collection: 'pages', id: item.id })))}
+    <Notice resource={pages} />{pages.data?.items.filter(item => item.slug !== 'raspored').map(item => row(item.title, item.excerpt.slice(0, 70), item.slug === 'kontakt' ? 'mail-outline' : 'information-circle-outline', () => navigate({ collection: 'pages', id: item.id })))}
     <Heading title="Vaša aplikacija" />
     {row('Praćenje i obavještenja', `${preferences.programYears.length} godina · ${preferences.courseIds.length} predmeta`, 'options-outline', edit)}
     <View style={s.notice}><Icon name="notifications-outline" /><View style={s.flex}><Text style={s.noticeTitle}>Push obavještenja</Text><Text accessibilityLiveRegion="polite" style={s.small}>{push.message}</Text><Text style={s.small}>Izbor studija i predmeta ostaje sačuvan i kada isključite push.</Text></View></View>
