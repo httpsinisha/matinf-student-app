@@ -2,6 +2,14 @@
 
 Updated: 26 September 2026.
 
+## Automatic schedule-change announcements (Core 0.5.1)
+
+The user requested only schedule-change notifications from the suggested follow-ups, and explicitly declined further verification. Calendar saves in the WordPress editor now compare stable event IDs and normalized date/day, time, room, course and period/type. Changed, added or cancelled upcoming terms create one important announcement per save with before/after details; unchanged saves and exclusively past exam corrections do not create an announcement. Audience targets are the affected course IDs, which also match followers of their program/year through the existing feed and push targeting. Existing opt-out and global push settings still apply. Tapping the push opens the announcement using the existing app flow, so this feature does not require another APK build.
+
+The announcement is staged as a draft before saving the calendar, then published only after the schedule is persisted. If publication fails, the editor reports the saved draft for manual publication. Versioned upload: `wordpress/dist/matinf-core-0.5.1.zip`; deployment of this new version requires replacing the current plugin. No additional tests or device checks were run for this addition, per the user's instruction.
+
+The completed phone APK is `artifacts/build/MATINF-phone.apk`, 69,230,747 bytes, SHA-256 `23db7bb9d168ab946e8e94641a1d1dc23469f19129b1a8cfa57d87337c7b77e0`, with arm64-v8a and x86_64 libraries. Signature verification passed and it was installed over the emulator app. Native staff/course detail-back and tab-switch scroll checks passed before the user stopped further checking. Native reminder end-to-end verification was not completed.
+
 ## Logo, calendar editor, reading state and exam reminders
 
 The supplied `logo_app_logo.png` is copied unchanged into app and theme assets, including the app header, onboarding, splash and launcher configuration. Adaptive icon XML adds an inset to preserve the artwork under Android masks. The home catalog counters are removed. Core 0.5.0 performs a one-time migration to the 35 requested staff names while keeping profile IDs and course relationships; custom contact addresses are preserved.

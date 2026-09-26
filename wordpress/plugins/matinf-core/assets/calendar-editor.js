@@ -19,6 +19,8 @@ document.addEventListener('DOMContentLoaded', () => {
       form.elements.revision.value = result.data.revision;
       rows.querySelectorAll('input[name$="[id]"]').forEach((input, index) => { input.value = result.data.ids[index]; });
       status.textContent = 'Raspored je sačuvan. Broj termina: ' + result.data.count + '.';
+      if (result.data.notificationError) status.textContent += ' ' + result.data.notificationError;
+      else if (result.data.notificationId) status.textContent += ' Objavljeno je obavještenje o promjeni za pratioce izmijenjenih predmeta.';
     } catch (error) { status.textContent = error.message || 'Provjerite vezu i pokušajte ponovo.'; }
     finally { controls.forEach(control => { control.disabled = false; }); }
   });

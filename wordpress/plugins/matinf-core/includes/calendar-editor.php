@@ -38,7 +38,7 @@ function matinf_exam_rows($pid, $year, $graduate = false) {
     usort($result, fn($a, $b) => [$a['date'], $a['start'], $a['id']] <=> [$b['date'], $b['start'], $b['id']]);
     return $result;
 }
-function matinf_calendar_save($type, $pid, $year, $semester, $rows, $revision) {
+function matinf_calendar_save($type, $pid, $year, $semester, $rows, $revision, $notify = false) {
     if (!matinf_can_edit_calendar()) return new WP_Error('forbidden', 'Nemate pravo uređivanja rasporeda.', ['status' => 403]);
     if (!in_array($type, ['classes','exams','graduate'], true) || !matinf_is_public($pid, 'mf_program') || $year < 1 || $year > (int) get_post_meta($pid, '_matinf_durationYears', true) || !in_array($semester, [1,2], true) || ($type === 'graduate' && (int) get_post_meta($pid, '_matinf_durationYears', true) < 4)) return new WP_Error('selection', 'Izaberite važeći program, godinu i vrstu rasporeda.', ['status' => 400]);
     if (!is_array($rows) || count($rows) > 80) return new WP_Error('rows', 'Najviše 80 termina u jednom rasporedu.', ['status' => 400]);
@@ -77,9 +77,23 @@ function matinf_calendar_save($type, $pid, $year, $semester, $rows, $revision) {
     if (!add_option('matinf_calendar_lock', time(), '', false)) return new WP_Error('busy', 'Drugo čuvanje je u toku. Pokušajte ponovo.', ['status' => 409]);
     try {
         if (!hash_equals(matinf_calendar_revision($key), (string) $revision)) return new WP_Error('conflict', 'Raspored je u međuvremenu promijenjen. Osvježite stranicu prije ponovnog uređivanja.', ['status' => 409]);
-        $all = get_option('matinf_calendar_overrides', []); $all[$key] = $valid;
-        update_option('matinf_calendar_overrides', $all, false);
-        return ['revision' => matinf_calendar_revision($key), 'count' => count($valid), 'ids' => array_column($valid, 'id')];
+        $notice = 0;
+        if ($notify) {
+            $before = $type === 'classes' ? matinf_calendar_classes($pid, $year, $semester) : matinf_exam_rows($pid, $year, $type === 'graduate');
+            $notice = matinf_calendar_change_draft($type, $pid, $type === 'graduate' ? 4 : $year, $semester, matinf_calendar_changes($type, $before, $valid));
+            if (is_wp_error($notice)) return $notice;
+        }
+        $previous = get_option('matinf_calendar_overrides', []); $all = $previous; $all[$key] = $valid;
+        if ($all !== $previous && !update_option('matinf_calendar_overrides', $all, false)) {
+            if ($notice) wp_delete_post($notice, true);
+            return new WP_Error('calendar_storage', 'Raspored nije sačuvan. Pokušajte ponovo.', ['status' => 500]);
+        }
+        $notice_error = '';
+        if ($notice) {
+            $published = wp_update_post(['ID' => $notice, 'post_status' => 'publish'], true);
+            if (is_wp_error($published) || get_post_status($notice) !== 'publish') $notice_error = 'Raspored je sačuvan, ali obavještenje nije objavljeno. Objavite sačuvani nacrt u meniju Objave.';
+        }
+        return ['revision' => matinf_calendar_revision($key), 'count' => count($valid), 'ids' => array_column($valid, 'id'), 'notificationId' => $notice, 'notificationError' => $notice_error];
     } finally { delete_option('matinf_calendar_lock'); }
 }
 
@@ -109,7 +123,7 @@ add_action('admin_menu', function () {
         if (!$programs) { echo '<div class="wrap"><h1>Prvo dodajte studijske programe.</h1></div>'; return; }
         $pid = absint($_GET['program_id'] ?? $programs[0]->ID); $year = absint($_GET['study_year'] ?? 1); $semester = absint($_GET['semester'] ?? 1);
         $type = sanitize_key($_GET['calendar_type'] ?? 'classes'); if (!in_array($type, ['classes','exams','graduate'], true)) $type = 'classes';
-        echo '<div class="wrap"><h1>Raspored nastave i ispita</h1><p>Izaberite program i godinu. Dodajte, izmijenite ili uklonite termine, zatim sačuvajte. Aplikacija dobija izmjene pri osvježavanju rasporeda.</p><form method="get"><input type="hidden" name="page" value="matinf-calendar"><select aria-label="Program" name="program_id">';
+        echo '<div class="wrap"><h1>Raspored nastave i ispita</h1><p>Izaberite program i godinu. Dodajte, izmijenite ili uklonite termine, zatim sačuvajte. Aplikacija dobija izmjene pri osvježavanju rasporeda.</p><p>Promjena, dodavanje ili otkazivanje termina automatski objavljuje jedno obavještenje za pratioce tih predmeta i godina. Push poruka stiže pratiocima koji su uključili dostavu. Čuvanje bez promjena ne šalje novu poruku.</p><form method="get"><input type="hidden" name="page" value="matinf-calendar"><select aria-label="Program" name="program_id">';
         foreach (matinf_program_groups() as $group) {
             if (!$group['items']) continue;
             echo '<optgroup label="' . esc_attr($group['label']) . '">';
@@ -140,7 +154,7 @@ add_action('admin_enqueue_scripts', function ($hook) { if ($hook === 'toplevel_p
 add_action('wp_ajax_matinf_calendar_save', function () {
     if (!matinf_can_edit_calendar()) wp_send_json_error(['message'=>'Nemate pravo uređivanja.'], 403);
     check_ajax_referer('matinf_calendar_save', '_wpnonce');
-    $result = matinf_calendar_save(sanitize_key($_POST['calendar_type'] ?? ''), absint($_POST['program_id'] ?? 0), absint($_POST['study_year'] ?? 0), absint($_POST['semester'] ?? 0), wp_unslash($_POST['rows'] ?? []), sanitize_text_field(wp_unslash($_POST['revision'] ?? '')));
+    $result = matinf_calendar_save(sanitize_key($_POST['calendar_type'] ?? ''), absint($_POST['program_id'] ?? 0), absint($_POST['study_year'] ?? 0), absint($_POST['semester'] ?? 0), wp_unslash($_POST['rows'] ?? []), sanitize_text_field(wp_unslash($_POST['revision'] ?? '')), true);
     if (is_wp_error($result)) wp_send_json_error(['message'=>$result->get_error_message()], $result->get_error_data()['status'] ?? 400);
     wp_send_json_success($result);
 });
