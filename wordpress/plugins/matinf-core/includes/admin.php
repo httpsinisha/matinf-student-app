@@ -57,6 +57,9 @@ function matinf_meta_box($post) {
     }
     if ($post->post_type === 'post') {
         matinf_audience_box($post);
+        echo '<p><label>Vrsta obavještenja <select name="matinf[noticeKind]">';
+        foreach (['general' => 'Opšte', 'exam' => 'Ispiti', 'material' => 'Materijali', 'schedule' => 'Promjena rasporeda'] as $kind => $label) echo '<option value="' . esc_attr($kind) . '" ' . selected(get_post_meta($post->ID, '_matinf_noticeKind', true), $kind, false) . '>' . esc_html($label) . '</option>';
+        echo '</select></label></p>';
         echo '<p><label><input type="checkbox" name="matinf[important]" value="1" ' . checked((bool) get_post_meta($post->ID, '_matinf_important', true), true, false) . '> Važno obavještenje</label></p>';
         echo '<p>Izaberite kategoriju <strong>Novosti</strong> ili <strong>Obavještenja</strong> da objava bude dostupna aplikaciji.</p>';
     }

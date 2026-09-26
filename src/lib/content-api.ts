@@ -8,7 +8,7 @@ export type Related = { id: number; title: string; type: Collection; url: string
 export type Content = Related & {
   slug: string; excerpt: string; bodyHtml: string; publishedAt: string; updatedAt: string;
   image: { url: string; alt: string } | null;
-  meta: { attachments?: { id: number; title: string; url: string; mimeType: string }[]; important?: boolean; authorName?: string; level?: string; durationYears?: number; ects?: number; programId?: number; year?: number; semester?: number; staffGroup?: string; academicTitle?: string; email?: string; fileUrl?: string; mimeType?: string; audience?: { everyone: boolean; programYears: string[]; courseIds: number[] } };
+  meta: { attachments?: { id: number; title: string; url: string; mimeType: string }[]; noticeKind?: 'general' | 'exam' | 'material' | 'schedule'; important?: boolean; authorName?: string; level?: string; durationYears?: number; ects?: number; programId?: number; year?: number; semester?: number; staffGroup?: string; academicTitle?: string; email?: string; fileUrl?: string; mimeType?: string; audience?: { everyone: boolean; programYears: string[]; courseIds: number[] } };
   relations: { program?: Related; staff?: Related[]; courses?: Related[]; documents?: Related[] };
 };
 export type Page = { items: Content[]; total: number; totalPages: number; page: number; perPage: number };
@@ -37,9 +37,11 @@ export function useContent<T>(path: string) {
   const refresh = useCallback(async () => {
     const run = ++generation.current;
     const key = `@matinf/content/v1:${apiUrl}:${path}`;
+    // Read IDs change on every opened article; do not create an unbounded cache per history snapshot.
+    const cacheable = !path.includes('exclude_ids=');
     setLoading(true); setError(null); setMissing(false);
     try {
-      const cached = await AsyncStorage.getItem(key);
+      const cached = cacheable ? await AsyncStorage.getItem(key) : null;
       if (cached && run === generation.current) {
         try { const value = JSON.parse(cached); setData(value.data); setSavedAt(value.savedAt); } catch { /* Invalid local cache is replaced on success. */ }
       }
@@ -47,7 +49,7 @@ export function useContent<T>(path: string) {
       if (run !== generation.current) return;
       const timestamp = new Date().toISOString();
       setData(next); setSavedAt(timestamp); setOffline(false);
-      await AsyncStorage.setItem(key, JSON.stringify({ data: next, savedAt: timestamp })).catch(() => undefined);
+      if (cacheable) await AsyncStorage.setItem(key, JSON.stringify({ data: next, savedAt: timestamp })).catch(() => undefined);
     } catch (cause) {
       if (run !== generation.current) return;
       if (cause instanceof ApiError && cause.status === 404) {

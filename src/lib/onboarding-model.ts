@@ -22,6 +22,19 @@ export function toggleSelection(values: string[], value: string): string[] {
   return values.includes(value) ? values.filter((item) => item !== value) : [...values, value];
 }
 
+export function scheduleFollowing(preferences: Pick<Preferences, 'programYears' | 'courseIds'>, programs: { id: number; meta: { durationYears?: number; level?: string } }[], courses: { id: number; meta: { programId?: number | null; year?: number } }[]) {
+  const valid = (programId: number, year: number) => Number.isInteger(year) && year >= 1 && programs.some(p => p.id === programId && year <= (p.meta.durationYears || 0));
+  for (const choice of preferences.programYears) {
+    const [programId, year] = choice.split(':').map(Number);
+    if (valid(programId, year)) return { programId, year };
+  }
+  for (const id of preferences.courseIds) {
+    const course = courses.find(c => String(c.id) === id);
+    if (course?.meta.programId && course.meta.year && valid(course.meta.programId, course.meta.year)) return { programId: course.meta.programId, year: course.meta.year };
+  }
+  return { programId: (programs.find(p => p.meta.level === 'undergraduate') || programs[0])?.id || 0, year: 1 };
+}
+
 export function followedCourses<T extends { id: string; programId: string; year: number }>(programYears: string[], courseIds: string[], courses: T[]): T[] {
   const years = new Set(programYears);
   const individual = new Set(courseIds);

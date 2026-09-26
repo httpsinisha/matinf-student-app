@@ -39,6 +39,6 @@ function New-WordPressPackage($source, $destination, $requiredFiles) {
     Write-Output "Verified $folderName archive: $($files.Count) files with portable ZIP paths."
 }
 
-New-WordPressPackage (Join-Path $wordpressRoot 'plugins/matinf-core') (Join-Path $packageOutput 'matinf-core.zip') @('matinf-core.php', 'includes/rest.php', 'includes/push.php', 'includes/push-admin.php', 'includes/catalog.php', 'includes/editor.php', 'includes/schedule.php', 'includes/student-life.php', 'assets/editor.js', 'assets/catalog-import.js', 'data/catalog.json')
-New-WordPressPackage (Join-Path $wordpressRoot 'themes/matinf') (Join-Path $packageOutput 'matinf-theme.zip') @('style.css', 'index.php', 'functions.php')
+New-WordPressPackage (Join-Path $wordpressRoot 'plugins/matinf-core') (Join-Path $packageOutput 'matinf-core.zip') @('matinf-core.php', 'includes/rest.php', 'includes/push.php', 'includes/push-admin.php', 'includes/catalog.php', 'includes/editor.php', 'includes/schedule.php', 'includes/student-life.php', 'includes/calendar-editor.php', 'includes/staff-update.php', 'assets/editor.js', 'assets/catalog-import.js', 'assets/calendar-editor.js', 'data/catalog.json', 'data/staff.json')
+New-WordPressPackage (Join-Path $wordpressRoot 'themes/matinf') (Join-Path $packageOutput 'matinf-theme.zip') @('style.css', 'index.php', 'functions.php', 'assets/matinf-logo.png')
 Write-Output "Upload packages created in $packageOutput"

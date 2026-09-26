@@ -45,7 +45,7 @@ function matinf_import_catalog_records($archive = true) {
         foreach ($existing as $post) $backup[] = ['post' => (array) $post, 'meta' => get_post_meta($post->ID)];
         update_option('matinf_catalog_backup', $backup, false);
     }
-    $names = ['Nikola Vuković','Stefan Radić','Milan Petrović','Aleksandar Savić','Jovana Kovačević','Vladimir Nikšić','Bojan Ilić','Boris Marković','Dimitrije Janković','Ivan Perić','Jelena Ristić','Marko Stanić','Petar Lukić','Andrej Božić','Ognjen Marić','Nevena Popović','Dragan Pavlović','Tatjana Tomić','Filip Milošević','Nenad Knežević','Maja Lazić','Sara Jović','Vladan Babić','Miloš Pantić','Mia Đurić','Milica Rakić','Nemanja Vasić','Milena Todorović','Slađana Zorić','Miroslav Đokić','Milanka Simić','Danilo Mitrović','Ilija Nikolić','Milan Vujić','Petar Delić'];
+    $names = json_decode(file_get_contents(__DIR__ . '/../data/staff.json'), true);
     $staff = [];
     foreach ($names as $index => $name) {
         $role = $index < 4 ? 'Redovni profesor' : ($index < 6 ? 'Vanredni profesor' : ($index < 12 ? 'Docent' : ($index < 15 ? 'Gostujući nastavnik' : ($index < 20 ? 'Nastavnik sa drugog studijskog programa / fakulteta' : ($index < 28 ? 'Saradnik u nastavi' : ($index < 31 ? 'Stručni saradnik' : 'Profesor u penziji'))))));

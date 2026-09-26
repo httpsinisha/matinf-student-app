@@ -36,6 +36,7 @@ function matinf_content_item($post, $collection, $detail = false) {
     if ($collection === 'documents') $meta = ['fileUrl' => esc_url_raw($read('fileUrl'), ['https', 'http']), 'mimeType' => $read('mimeType')];
     if (in_array($collection, ['news', 'announcements'], true)) $meta = ['important' => (bool) $read('important'), 'audience' => matinf_post_audience($id), 'authorName' => get_the_author_meta('display_name', $post->post_author)];
     if (in_array($collection, ['news', 'announcements'], true)) {
+        $meta['noticeKind'] = $read('noticeKind') ?: null;
         $meta['attachments'] = [];
         foreach ((array) $read('attachmentIds') as $file_id) {
             if (get_post_type($file_id) !== 'attachment' || get_post_status($file_id) === 'trash') continue;
@@ -81,6 +82,12 @@ function matinf_content_list($request) {
             if (isset($request[$param])) $args['meta_query'][] = ['key' => $key, 'value' => (int) $request[$param], 'type' => 'NUMERIC'];
         }
     }
+    if ($type === 'post' && !empty($request['exclude_ids'])) {
+        $excluded = explode(',', $request['exclude_ids']);
+        if (count($excluded) > 500 || array_filter($excluded, fn($id) => !ctype_digit($id) || (int) $id < 1)) return new WP_Error('matinf_excluded', 'Neispravna lista pročitanih objava.', ['status' => 400]);
+        $args['post__not_in'] = array_map('intval', $excluded);
+    }
+    if ($type === 'post' && !empty($request['important'])) $args['meta_query'] = ['relation' => 'AND', $args['meta_query'] ?? [], ['key' => '_matinf_important', 'value' => '1']];
     $query = new WP_Query($args);
     return ['items' => array_map(fn ($post) => matinf_content_item($post, $collection === 'feed' ? matinf_collection_for_post($post) : $collection), $query->posts), 'page' => $page, 'perPage' => $per_page, 'total' => (int) $query->found_posts, 'totalPages' => (int) $query->max_num_pages];
 }
@@ -106,6 +113,8 @@ add_action('rest_api_init', function () {
             'program_id' => ['type' => 'integer', 'minimum' => 1],
             'year' => ['type' => 'integer', 'minimum' => 1, 'maximum' => 4],
             'following' => ['type' => 'boolean', 'default' => false],
+            'important' => ['type' => 'boolean', 'default' => false],
+            'exclude_ids' => ['type' => 'string', 'maxLength' => 6000, 'default' => ''],
             'program_years' => ['type' => 'string', 'maxLength' => 1500, 'default' => ''],
             'course_ids' => ['type' => 'string', 'maxLength' => 1500, 'default' => ''],
         ],

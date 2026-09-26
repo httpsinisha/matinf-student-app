@@ -2,14 +2,14 @@
 /**
  * Plugin Name: MATINF Core
  * Description: Academic content, validated relationships and the public MATINF mobile API.
- * Version: 0.4.0
+ * Version: 0.5.0
  * Requires at least: 6.8
  * Requires PHP: 8.2
  * License: GPL-2.0-or-later
  * Text Domain: matinf
  */
 defined('ABSPATH') || exit;
-define('MATINF_VERSION', '0.4.0');
+define('MATINF_VERSION', '0.5.0');
 require_once __DIR__ . '/includes/editor.php';
 require_once __DIR__ . '/includes/content.php';
 require_once __DIR__ . '/includes/publishing.php';
@@ -31,3 +31,7 @@ register_activation_hook(__FILE__, function () {
 register_deactivation_hook(__FILE__, 'flush_rewrite_rules');
 
 require_once __DIR__ . '/includes/student-life.php';
+
+require_once __DIR__ . '/includes/staff-update.php';
+
+require_once __DIR__ . '/includes/calendar-editor.php';

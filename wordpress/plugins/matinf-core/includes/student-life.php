@@ -39,10 +39,11 @@ add_action('admin_post_matinf_student_life', function () {
     wp_safe_redirect(admin_url('tools.php?page=matinf-student-life')); exit;
 });
 
-function matinf_exam_rows($pid, $year, $graduate = false) {
+function matinf_generated_exam_rows($pid, $year, $graduate = false) {
     $args = ['post_type' => 'mf_course', 'post_status' => 'publish', 'has_password' => false, 'numberposts' => -1, 'orderby' => 'title', 'order' => 'ASC', 'meta_query' => [['key' => '_matinf_programId', 'value' => $pid, 'type' => 'NUMERIC']]];
     $courses = get_posts($args); $rows = [];
-    $periods = $graduate ? ['Oktobarski apsolventski' => '2026-10-05', 'Novembarski apsolventski' => '2026-11-02', 'Decembarski apsolventski' => '2026-12-01'] : ['Januarsko-februarski' => '2027-01-18', 'Junsko-julski' => '2027-06-07', 'Septembarski' => '2027-09-01'];
+    if ($graduate) $courses = array_slice(array_values(array_filter($courses, fn($course) => (int) get_post_meta($course->ID, '_matinf_year', true) === 4 && !preg_match('/rad$|praksa$/iu', $course->post_title))), 0, 3);
+    $periods = $graduate ? ['Oktobarski apsolventski' => '2026-10-05', 'Novembarski apsolventski' => '2026-11-02'] : ['Januarsko-februarski' => '2027-01-18', 'Junsko-julski' => '2027-06-07', 'Septembarski' => '2027-09-01'];
     foreach ($periods as $period => $date) foreach ($courses as $index => $course) {
         if (!$graduate && (int) get_post_meta($course->ID, '_matinf_year', true) !== $year) continue;
         if (preg_match('/rad$|praksa$/iu', $course->post_title)) continue;

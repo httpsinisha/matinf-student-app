@@ -5,7 +5,7 @@ function matinf_schedule_result($request) {
     $pid = (int) $request['program_id']; $year = (int) $request['year']; $semester = (int) $request['semester'];
     if (!matinf_is_public($pid, 'mf_program') || $year < 1 || $year > (int) get_post_meta($pid, '_matinf_durationYears', true) || !in_array($semester, [1, 2], true)) return new WP_Error('matinf_schedule_selection', 'Izaberite važeći program i godinu.', ['status' => 400]);
     $items = [];
-    foreach ((array) get_option('matinf_schedule', []) as $row) {
+    foreach (matinf_calendar_classes($pid, $year, $semester) as $row) {
         if ($row['programId'] !== $pid || $row['year'] !== $year || $row['semester'] !== $semester || !matinf_is_public($row['courseId'], 'mf_course')) continue;
         $items[] = array_merge($row, ['room' => str_replace('Demo sala', 'Učionica', $row['room']), 'course' => matinf_summary($row['courseId']), 'staff' => matinf_summary($row['staffId'])]);
     }
@@ -44,7 +44,7 @@ add_shortcode('matinf_schedule', function () {
     }
     if (!is_wp_error($result)) {
         matinf_exam_table('Raspored ispita', $result['exams']);
-        echo '<p>Apsolventski rokovi su namijenjeni studentima koji su odslušali svu nastavu. Prikaz obuhvata predmete svih godina izabranog programa. Uslove izlaska na ispit provjerite u studentskoj službi.</p>';
+        echo '<p>Apsolventski rokovi obuhvataju odabrane predmete četvrte godine izabranog programa. Prikazani su samo objavljeni termini.</p>';
         matinf_exam_table('Apsolventski rokovi', $result['graduateExams']);
     }
     return ob_get_clean();

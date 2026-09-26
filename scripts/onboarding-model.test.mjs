@@ -1,6 +1,18 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { followedCourses, parsePreferences, restoreProgramId, toggleSelection } from '../src/lib/onboarding-model.ts';
+import { followedCourses, parsePreferences, restoreProgramId, toggleSelection, scheduleFollowing } from '../src/lib/onboarding-model.ts';
+
+test('schedule follows selection order, skips invalid years, supports master and course-only following', () => {
+  const programs = [{ id: 51, meta: { durationYears: 1, level: 'master' } }, { id: 30, meta: { durationYears: 4, level: 'undergraduate' } }, { id: 21, meta: { durationYears: 4, level: 'undergraduate' } }];
+  const courses = [{ id: 101, meta: { programId: 30, year: 3 } }];
+  const choose = (programYears, courseIds = []) => scheduleFollowing({ programYears, courseIds }, programs, courses);
+  assert.deepEqual(choose(['21:4', '30:2']), { programId: 21, year: 4 });
+  assert.deepEqual(choose(['30:2', '21:4']), { programId: 30, year: 2 });
+  assert.deepEqual(choose(['999:1', '30:5', '21:3']), { programId: 21, year: 3 });
+  assert.deepEqual(choose(['51:1', '30:1']), { programId: 51, year: 1 });
+  assert.deepEqual(choose([], ['101']), { programId: 30, year: 3 });
+  assert.deepEqual(choose([]), { programId: 30, year: 1 });
+});
 
 test('course totals include years and individual courses across programs without duplicates', () => {
   const courses = [

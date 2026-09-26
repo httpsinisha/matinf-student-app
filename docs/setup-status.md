@@ -1,6 +1,30 @@
 # Setup decisions and implementation status
 
-Updated: 25 September 2026.
+Updated: 26 September 2026.
+
+## Logo, calendar editor, reading state and exam reminders
+
+The supplied `logo_app_logo.png` is copied unchanged into app and theme assets, including the app header, onboarding, splash and launcher configuration. Adaptive icon XML adds an inset to preserve the artwork under Android masks. The home catalog counters are removed. Core 0.5.0 performs a one-time migration to the 35 requested staff names while keeping profile IDs and course relationships; custom contact addresses are preserved.
+
+WordPress → Raspored lets administrators and MATINF professors add/edit/delete class, regular-exam and fourth-year graduate-exam rows. Validation covers cohort, semester, published relationships, dates, times, rooms and overlapping events. Nonces and capability checks protect saves; revision checks prevent stale editors overwriting newer changes. Saved rows are shared by the website and public schedule API, with stable exam IDs and explicit Europe/Sarajevo offsets. Overrides survive catalog reimport.
+
+Visited tabs and stacked detail screens remain mounted with their filters and scroll state. Android hidden screens keep their layout size to avoid offset clamping. Notifications have unread/important filters and notice-type labels; reading either category marks the shared post as read. The capped, site-scoped read history persists locally. Volatile unread queries are not cached as separate history snapshots.
+
+Android exam reminders can be set one hour or one day before an exam, reviewed/cancelled under Više → Moji podsjetnici, and opened at the corresponding program/year/period. They are independent of remote post push opt-in. Fresh online schedules reconcile moved/deleted exams; offline sessions keep existing alarms. Future alarms missing after an Android force-stop are restored on reopening. Actual timing is subject to Android background scheduling.
+
+Validation: TypeScript and 12 app-model checks; 7 catalog/calendar checks; 15 WordPress integration checks. Browser acceptance verifies a real calendar edit/save/REST read, row controls, nonce rejection, all five tabs' scroll position after detail/back and tab switching, and persistent unread/important filters. Screenshots: `artifacts/schedule/calendar-editor.png`, `notifications-updated.png`. Upload packages: `wordpress/dist/matinf-core-0.5.0.zip`, `matinf-theme-0.4.0.zip`.
+
+Hosted acceptance on 26 September confirms Core 0.5.0, theme 0.4.0, all 35 requested names and exam IDs/offset timestamps on `sinisa.alwaysdata.net`. The new logo is visible in the hosted mobile website screenshot `artifacts/reader-hosted/website-new-logo.png`. Native reminder acceptance is recorded separately after verification.
+
+## Following drives schedules; physical phone package
+
+Schedule opening and return from saved following now choose the first valid program/year in selection order. Course-only following derives the first course's cohort; with no following the first undergraduate year is the fallback. Manual schedule choices last for that screen visit; only semester is persisted. Legacy independent program/year cache is ignored. The selector also accepts master/doctoral programs so an earlier chosen level is not silently skipped (weekly teaching data remains focused on undergraduate programs).
+
+Core 0.4.1 limits graduate exams to three fourth-year courses in October/November (six rows); programs without fourth-year courses return none. The client also filters legacy responses to fourth-year entries. Nine model tests and TypeScript pass; the targeted graduate API test passes across all programs. The user deployed Core 0.4.1 during this turn.
+
+Phone build script: `scripts/build-android-phone.ps1`, producing `artifacts/build/MATINF-phone.apk` with arm64-v8a and x86_64. Build succeeded in 15m51s on the first ARM64 compilation. APK is 68,533,029 bytes; SHA-256 `2c80005d897bd1ab1c1976c3b2b1a18cb5c74cc3d2262d702d739e86f7a7e137`. Android apksigner verification passes; minimum API 24, target 36, 24 native libraries per ABI, embedded JS contains the public hosted URL and no local test URL. Installation over the emulator app preserved data, and native exam/graduate navigation passed against the hosted API. Physical phone execution remains for the user to test; see `docs/phone-testing.md`.
+
+Browser acceptance passed: ignored legacy independent fourth-year cache, retained semester, saved Math/Informatics fourth year before Informatics second year through the actual following editor, verified the requested API program/year and corresponding teaching/exams, and reopened the correct cached schedule offline. Screenshot: `artifacts/schedule/following-schedule.png`. Graduate UI and API contain six terms across only three fourth-year courses. The initial run stopped on a test-only assumption about the web `aria-selected` attribute; the assertion now checks the actual requested program/year and rendered course content.
 
 ## Official catalog, publishing attachments and timetable
 

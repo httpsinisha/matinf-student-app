@@ -65,4 +65,4 @@ await waitText('Ispiti'); await tap('Ispiti');
 await waitText('Januarsko-februarski'); capture('native-exams');
 await tap('Apsolventi'); await waitText('Oktobarski apsolventski');
 capture('native-graduate-exams');
-console.log('PASS: native exam and graduate period controls consume hosted Core 0.4.0.');
+console.log('PASS: native exam and graduate period controls consume the hosted schedule API.');

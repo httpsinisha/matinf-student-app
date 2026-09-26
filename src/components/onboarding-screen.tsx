@@ -35,7 +35,7 @@ export function OnboardingScreen({ onContinue, onSkip }: Props) {
         <View style={[styles.content, { maxWidth: 491 }]}>
           <View style={[styles.header, fontScale > 1.2 && { flexDirection: "column", alignItems: "flex-start" }]}>
             <View style={styles.brand} accessibilityLabel="MATINF. Matematika. Informatika. Budućnost.">
-              <Artwork region="logo" width={49 * scale} />
+              <Image source={require("../../assets/images/matinf-logo.png")} style={{ width: 65 * scale, height: 65 * scale }} resizeMode="contain" />
               <View style={{ marginLeft: 12 * scale }}>
                 <Text style={[styles.brandName, { fontSize: 24 * scale, lineHeight: 27 * scale }]}>MATINF</Text>
                 <Text style={[styles.tagline, { fontSize: 11 * scale, lineHeight: 14 * scale }]}>{"Matematika. Informatika.\nBudućnost."}</Text>

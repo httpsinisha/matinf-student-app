@@ -49,7 +49,9 @@ Raspored sada vraća i `exams` za izabranu godinu i `graduateExams` za sve godin
 
 Osoblje je grupisano kao Rukovodioci, Nastavnici i Saradnici. Prva tri uvezena profila predstavljaju rukovodioce; ostali se grupišu po zvanju. Stranica `studentske-price` sadrži tri izmišljene priče i dostupna je iz navigacije i početne stranice sajta, te iz **Više** u aplikaciji. Na zahtjev korisnika nisu dodavane pojedinačne oznake „primjer“ u prikazima. Prilozi objava su ispod tijela teksta na oba klijenta.
 
-Android: **Početna → Moj raspored nastave** ili **Više → Moj raspored**. Izabrati osnovni program, godinu i zimski/ljetni semestar, pa pregledati sedmicu ili određeni dan. Izbor se pamti na uređaju odvojeno od pretplata za obavještenja. Dodir termina otvara predmet. Ranije učitan raspored se čuva za prikaz bez mreže.
+Android: **Početna → Moj raspored nastave** ili **Više → Moj raspored**. Pri otvaranju i nakon čuvanja praćenja program/godina dolaze iz prvog važećeg para u sačuvanom redoslijedu izbora. Ako se prate samo pojedinačni predmeti, koristi se program/godina prvog važećeg predmeta; bez praćenja prvi osnovni program i prva godina. Moguće je privremeno pregledati drugi program/godinu; pri ponovnom otvaranju vraća se praćeni izbor. Pamti se samo semestar. Stari odvojeni program/godina iz lokalne memorije više ne prepisuju praćenje. Dodir termina otvara predmet. Ranije učitan raspored se čuva za prikaz bez mreže.
+
+Core 0.4.1: apsolventski raspored ograničen je na prva tri ponuđena predmeta četvrte godine, bez prakse/završnog rada, u oktobarskom i novembarskom roku — ukupno šest termina po osnovnom programu. Programi bez četvrte godine nemaju apsolventske termine. Ova izmjena zamjenjuje raniji prikaz svih godina i tri roka opisan u istorijskoj dopuni iznad. Za promjenu sajta dovoljno je zamijeniti plugin ZIP; nema novog uvoza podataka.
 
 Sajt: `/raspored/`, isti REST podaci i izbori. Endpoint: `GET /wp-json/matinf/v1/schedule?program_id=ID&year=1&semester=1`.
 

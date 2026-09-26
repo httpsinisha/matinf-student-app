@@ -16,6 +16,28 @@ async function request(path, options = {}) {
 }
 const api = '/wp-json/matinf/v1';
 
+test('unread and important filters keep targeted feed boundaries and correct totals', async () => {
+  const result = await php(`
+    $ids=[];
+    try {
+      foreach([['A',true,1],['B',true,2],['C',false,1]] as [$title,$important,$year]) {
+        $id=wp_insert_post(['post_type'=>'post','post_status'=>'publish','post_title'=>'Read filter fixture '.$title,'post_category'=>[get_term_by('slug','obavjestenja','category')->term_id]]); $ids[]=$id;
+        update_post_meta($id,'_matinf_important',$important); update_post_meta($id,'_matinf_everyone',false); update_post_meta($id,'_matinf_audienceYears',['${fixtures.program}:'.$year]);
+      }
+      $all=matinf_content_list(['collection'=>'feed','per_page'=>50,'important'=>true]);
+      $excluded=matinf_content_list(['collection'=>'feed','per_page'=>50,'important'=>true,'exclude_ids'=>(string)$ids[0]]);
+      $bad=matinf_content_list(['collection'=>'feed','exclude_ids'=>'1,invalid']);
+      $personal=matinf_content_list(['collection'=>'feed','per_page'=>50,'important'=>true,'following'=>true,'program_years'=>'${fixtures.program}:1']);
+      echo wp_json_encode(['personal'=>array_values(array_intersect($ids,array_column($personal['items'],'id'))),'before'=>array_values(array_intersect($ids,array_column($all['items'],'id'))),'after'=>array_values(array_intersect($ids,array_column($excluded['items'],'id'))),'expected'=>[$ids[0],$ids[1]],'remaining'=>[$ids[1]],'totalDifference'=>$all['total']-$excluded['total'],'invalid'=>$bad->get_error_code()]);
+    } finally { foreach($ids as $id) wp_delete_post($id,true); }
+  `);
+  assert.deepEqual(result.before, result.expected);
+  assert.deepEqual(result.personal, [result.expected[0]]);
+  assert.deepEqual(result.after, result.remaining);
+  assert.equal(result.totalDifference, 1);
+  assert.equal(result.invalid, 'matinf_excluded');
+});
+
 before(async () => {
   site = await startWordPress({ port: 9410, storage: '.test-runtime' });
   fixtures = await php(`

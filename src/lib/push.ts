@@ -140,7 +140,7 @@ export function usePush(preferences: Preferences | null, onOpen: (destination: P
       const target = pushDestination(event.notification.request.content.data, siteUrl);
       if (!target) return;
       const key = `@matinf/push-opened:${siteUrl}`;
-      const id = event.notification.request.identifier;
+      const id = `${event.notification.request.identifier}:${event.notification.date}`;
       if (await AsyncStorage.getItem(key) === id) return;
       await AsyncStorage.setItem(key, id);
       onOpen(target);

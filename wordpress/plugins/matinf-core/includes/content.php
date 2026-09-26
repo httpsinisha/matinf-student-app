@@ -86,6 +86,9 @@ function matinf_validate_fields($type, $input) {
         }
         $output['attachmentIds'] = array_values(array_unique($output['attachmentIds']));
         $output['important'] = !empty($input['important']);
+        $kind = $input['noticeKind'] ?? 'general';
+        if (!in_array($kind, ['general','exam','material','schedule'], true)) return new WP_Error('matinf_kind', 'Neispravna vrsta obavještenja.', ['status' => 400]);
+        $output['noticeKind'] = $kind;
         $audience = matinf_validate_audience($input);
         if (is_wp_error($audience)) return $audience;
         $output = array_merge($output, $audience);
