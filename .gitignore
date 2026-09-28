@@ -46,6 +46,7 @@ example
 /wordpress/.runtime/
 /wordpress/.test-runtime/
 /wordpress/.catalog-test-runtime/
+/wordpress/.contact-test-runtime/
 /artifacts/pdf-tools/
 /artifacts/catalog-source/
 /artifacts/catalog-web/

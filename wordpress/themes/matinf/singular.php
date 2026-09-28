@@ -11,7 +11,7 @@
     <?php if (post_password_required()) echo get_the_password_form(); elseif ($post->post_type === 'page' && $post->post_name === 'raspored') echo do_shortcode('[matinf_schedule]'); else echo $item ? $item['bodyHtml'] : wp_kses_post(apply_filters('the_content', $post->post_content)); ?>
     <?php if (!post_password_required() && !empty($meta['attachments'])) : ?><section class="card"><h2>Dokumenti uz objavu</h2><ul><?php foreach ($meta['attachments'] as $file) : ?><li><a href="<?php echo esc_url($file['url']); ?>"><?php echo esc_html($file['title']); ?> ↗</a></li><?php endforeach; ?></ul></section><?php endif; ?>
     <?php if ($type === 'documents' && !empty($meta['fileUrl'])) : ?><a class="button" href="<?php echo esc_url($meta['fileUrl']); ?>">Otvori dokument ↗</a><?php endif; ?>
-    <?php if ($type === 'staff' && !empty($meta['email'])) : ?><a class="button" href="mailto:<?php echo esc_attr($meta['email']); ?>">Pošalji email</a><?php endif; ?>
+    <?php if ($type === 'staff' && function_exists('matinf_contact_form')) matinf_contact_form($post->ID); ?>
     <?php if ($type === 'programs') : ?>
         <h2>Godine studija i predmeti</h2>
         <?php for ($year = 1; $year <= ($meta['durationYears'] ?? 0); $year++) :

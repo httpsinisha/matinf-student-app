@@ -2,14 +2,14 @@
 /**
  * Plugin Name: MATINF Core
  * Description: Academic content, validated relationships and the public MATINF mobile API.
- * Version: 0.5.2
+ * Version: 0.6.1
  * Requires at least: 6.8
  * Requires PHP: 8.2
  * License: GPL-2.0-or-later
  * Text Domain: matinf
  */
 defined('ABSPATH') || exit;
-define('MATINF_VERSION', '0.5.2');
+define('MATINF_VERSION', '0.6.1');
 require_once __DIR__ . '/includes/editor.php';
 require_once __DIR__ . '/includes/content.php';
 require_once __DIR__ . '/includes/publishing.php';
@@ -36,4 +36,6 @@ require_once __DIR__ . '/includes/staff-update.php';
 
 require_once __DIR__ . '/includes/calendar-editor.php';
 require_once __DIR__ . '/includes/calendar-validation.php';
+require_once __DIR__ . '/includes/contact.php';
+require_once __DIR__ . '/includes/contact-admin.php';
 require_once __DIR__ . '/includes/calendar-notifications.php';

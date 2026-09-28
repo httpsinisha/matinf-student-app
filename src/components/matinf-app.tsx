@@ -13,6 +13,7 @@ import { ScheduleScreen } from './schedule-screen';
 import { ReaderProvider, useReadPosts, noticeLabel } from '@/lib/reader-state';
 import { ReminderProvider, useReminders } from '@/lib/reminders';
 import { RemindersScreen } from './reminders-screen';
+import { ContactProfessor } from './contact-professor';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 type Tab = 'home' | 'announcements' | 'courses' | 'staff' | 'more';
@@ -249,12 +250,13 @@ function Detail({ screen, active, navigate, preferences, edit }: { active: boole
       <View style={s.detailTop}><Text style={s.eyebrow}>{labels[item.type].toUpperCase()}</Text><Pressable accessibilityRole="button" accessibilityLabel="Podijeli" onPress={() => void Share.share({ message: `${item.title}\n${item.url}` }).catch(() => Alert.alert('Dijeljenje nije dostupno'))} style={s.headerButton}><Icon name="share-social-outline" /></Pressable></View>
       <Text style={s.detailTitle}>{item.title}</Text>
       {['news', 'announcements'].includes(item.type) && <Text style={s.meta}>{date(item.publishedAt)}{item.meta.authorName ? ` · ${item.meta.authorName}` : ''}</Text>}
-      {item.type === 'staff' && <><Text style={s.description}>{item.meta.academicTitle}</Text>{item.meta.email && <Action title="Pošalji email" onPress={() => void openUrl(`mailto:${item.meta.email}`)} />}</>}
+      {item.type === 'staff' && <Text style={s.description}>{item.meta.academicTitle}</Text>}
       {item.type === 'programs' && <View style={s.infoStrip}><Icon name="school-outline" /><Text style={s.infoText}>{levelLabel[item.meta.level || '']} · {item.meta.durationYears} godine · {item.meta.ects} ECTS</Text></View>}
       {item.type === 'courses' && <><View style={s.infoStrip}><Icon name="calendar-outline" /><Text style={s.infoText}>{item.meta.year}. godina · {item.meta.semester}. semestar</Text></View>{item.relations.program && relation(item.relations.program)}<Pressable accessibilityRole="button" onPress={edit} style={s.followCard}><Icon name={subscribed ? 'checkmark-circle' : 'notifications-outline'} color={subscribed ? '#148356' : '#2057ce'} /><View style={s.flex}><Text style={s.followTitle}>{subscribed ? 'Pratite ovaj predmet' : 'Pratite objave ovog predmeta'}</Text><Text style={s.small}>Promijenite izbor godina i predmeta</Text></View><Icon name="chevron-forward" size={18} /></Pressable></>}
       <View style={s.bodyCard}><ContentBody html={item.bodyHtml} /></View>
       {!!item.meta.attachments?.length && <><Heading title="Dokumenti uz objavu" />{item.meta.attachments.map(file => <Action key={file.id} title={`Otvori: ${file.title}`} onPress={() => void openUrl(file.url)} />)}</>}
       {item.type === 'programs' && <><Heading title="Godine studija" />{Array.from({ length: item.meta.durationYears || 0 }, (_, index) => <Pressable key={index} accessibilityRole="button" onPress={() => navigate({ collection: 'courses', programId: item.id, year: index + 1 })} style={s.relation}><View style={s.yearNumber}><Text style={s.blue}>{index + 1}</Text></View><Text style={[s.cardTitle, s.flex]}>{index + 1}. godina studija</Text><Icon name="chevron-forward" size={18} /></Pressable>)}</>}
+      {item.type === 'staff' && <ContactProfessor staffId={item.id} />}
       {!!item.relations.staff?.length && <><Heading title="Nastavno osoblje" />{item.relations.staff.map(relation)}</>}
       {!!item.relations.courses?.length && item.type !== 'programs' && <><Heading title="Predmeti" />{item.relations.courses.map(relation)}</>}
       {!!item.relations.documents?.length && <><Heading title="Dokumenti i materijali" />{item.relations.documents.map(relation)}</>}
