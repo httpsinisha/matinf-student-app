@@ -77,6 +77,9 @@ function matinf_calendar_save($type, $pid, $year, $semester, $rows, $revision, $
     if (!add_option('matinf_calendar_lock', time(), '', false)) return new WP_Error('busy', 'Drugo čuvanje je u toku. Pokušajte ponovo.', ['status' => 409]);
     try {
         if (!hash_equals(matinf_calendar_revision($key), (string) $revision)) return new WP_Error('conflict', 'Raspored je u međuvremenu promijenjen. Osvježite stranicu prije ponovnog uređivanja.', ['status' => 409]);
+        // Validate under the global save lock, before writing announcement drafts.
+        $resource_conflict = matinf_calendar_resource_conflict($type, $pid, $year, $semester, $valid);
+        if (is_wp_error($resource_conflict)) return $resource_conflict;
         $notice = 0;
         if ($notify) {
             $before = $type === 'classes' ? matinf_calendar_classes($pid, $year, $semester) : matinf_exam_rows($pid, $year, $type === 'graduate');
@@ -135,6 +138,7 @@ add_action('admin_menu', function () {
         echo '</select> <select aria-label="Semestar" name="semester"><option value="1" ' . selected($semester, 1, false) . '>Zimski</option><option value="2" ' . selected($semester, 2, false) . '>Ljetni</option></select> <select aria-label="Raspored" name="calendar_type">';
         foreach (['classes'=>'Nastava','exams'=>'Ispiti','graduate'=>'Apsolventski rokovi (4. godina)'] as $value=>$label) echo '<option value="' . $value . '" ' . selected($type, $value, false) . '>' . esc_html($label) . '</option>';
         echo '</select> <button class="button">Prikaži</button></form><hr>';
+        echo '<p>Pri čuvanju se provjerava zauzetost učionice i nastavnika u svim programima i godinama. Nastava se poredi u istom semestru, a redovni i apsolventski ispiti na isti datum. Nastava i ispiti se međusobno ne porede jer nastava nema unesen period održavanja. Za istu učionicu koristite isti naziv.</p>';
         if ($type === 'graduate') $year = 4;
         if (!matinf_is_public($pid, 'mf_program') || $year < 1 || $year > (int) get_post_meta($pid, '_matinf_durationYears', true)) { echo '<p>Za ovaj program izaberite važeću godinu.</p></div>'; return; }
         $courses_args = ['post_type'=>'mf_course','post_status'=>'publish','has_password'=>false,'numberposts'=>-1,'orderby'=>'title','order'=>'ASC','meta_query'=>[['key'=>'_matinf_programId','value'=>$pid],['key'=>'_matinf_year','value'=>$year]]];

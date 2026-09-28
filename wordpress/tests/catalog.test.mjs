@@ -10,6 +10,76 @@ async function php(code) {
 }
 before(async () => { site = await startWordPress({ port: 9412, storage: '.catalog-test-runtime' }); }, { timeout: 240000 });
 after(async () => { if (site) await site[Symbol.asyncDispose](); });
+test('calendar resource validation blocks cross-program bookings without writes or announcements', async () => {
+  const result = await php(`
+    wp_set_current_user(get_user_by('login', 'matinf-admin')->ID);
+    $saved = get_option('matinf_calendar_overrides', []); $schedule = get_option('matinf_schedule', []);
+    $created = []; $checks = [];
+    $check = function($ok, $name) use (&$checks) { if (!$ok) throw new RuntimeException($name); $checks[] = $name; };
+    $create = function($type, $title, $meta = []) use (&$created) {
+      $id = wp_insert_post(['post_type'=>$type, 'post_status'=>'publish', 'post_title'=>$title]); $created[] = $id;
+      foreach ($meta as $key=>$value) update_post_meta($id, '_matinf_' . $key, $value);
+      return $id;
+    };
+    try {
+      $a = $create('mf_program', 'Validation A', ['durationYears'=>4]);
+      $b = $create('mf_program', 'Validation B', ['durationYears'=>4]);
+      $teacher = $create('mf_staff', 'Validation Professor');
+      $ca = $create('mf_course', 'Validation Course A', ['programId'=>$a,'year'=>4,'semester'=>1]);
+      $cb = $create('mf_course', 'Validation Course B', ['programId'=>$b,'year'=>4,'semester'=>1,'staffIds'=>[$teacher]]);
+      $overrides = $saved;
+      foreach ([$a,$b] as $p) foreach (['classes','exams','graduate'] as $t) $overrides[matinf_calendar_key($t,$p,4,1)] = [];
+      $row = ['id'=>'validation-a','courseId'=>$ca,'programId'=>$a,'year'=>4,'semester'=>1,'day'=>1,'kind'=>'Predavanje','start'=>'09:00','end'=>'11:00','room'=>'Validation Room','staffId'=>$teacher];
+      $other = array_merge($row,['id'=>'validation-b','courseId'=>$cb,'programId'=>$b]);
+      $key = matinf_calendar_key('classes',$a,4,1); $otherKey = matinf_calendar_key('classes',$b,4,1);
+      $overrides[$otherKey] = [$other]; update_option('matinf_calendar_overrides',$overrides,false);
+      $revision = matinf_calendar_revision($key); $posts = wp_count_posts('post');
+      $error = matinf_calendar_save('classes',$a,4,1,[$row],$revision,true);
+      $check(is_wp_error($error) && $error->get_error_code()==='resource_conflict', 'cross-program room/teacher blocked');
+      $check(str_contains($error->get_error_message(),'Validation Course B') && str_contains($error->get_error_message(),'Validation Professor') && str_contains($error->get_error_message(),'09:00–11:00'), 'error identifies occupied event');
+      $check(get_option('matinf_calendar_overrides')===$overrides && wp_count_posts('post')==$posts && !get_option('matinf_calendar_lock'), 'rejection writes nothing and releases lock');
+      $check(is_wp_error(matinf_calendar_resource_conflict('classes',$a,4,1,[array_merge($row,['room'=>'Other room'])])), 'teacher alone conflicts');
+      $check(is_wp_error(matinf_calendar_resource_conflict('classes',$a,4,1,[array_merge($row,['staffId'=>0,'room'=>'  VALIDATION   ROOM  '])])), 'normalized room alone conflicts');
+      $check(matinf_calendar_room_key(' UČIONICA  101 ' )===matinf_calendar_room_key('učionica 101'), 'unicode room case');
+      foreach ([['day'=>2],['start'=>'11:00','end'=>'12:00'],['start'=>'08:00','end'=>'09:00'],['room'=>'Free room','staffId'=>0]] as $change) {
+        $check(matinf_calendar_resource_conflict('classes',$a,4,1,[array_merge($row,$change)])===null, 'independent slot ' . wp_json_encode($change));
+      }
+      $check(matinf_calendar_resource_conflict('classes',$a,4,2,[$row])===null, 'different semesters allowed');
+      $overrides[$otherKey]=[]; update_option('matinf_calendar_overrides',$overrides,false);
+      update_option('matinf_schedule',array_merge($schedule,[$other]),false);
+      $check(matinf_calendar_resource_conflict('classes',$a,4,1,[$row])===null, 'empty override suppresses legacy calendar');
+      unset($overrides[$otherKey]); update_option('matinf_calendar_overrides',$overrides,false);
+      $check(is_wp_error(matinf_calendar_resource_conflict('classes',$a,4,1,[$row])), 'legacy calendar is validated');
+      $overrides[$otherKey]=[]; update_option('matinf_calendar_overrides',$overrides,false);
+      $save = matinf_calendar_save('classes',$a,4,1,[$row],$revision);
+      $check(!is_wp_error($save), 'free slot saves');
+      $again = matinf_calendar_save('classes',$a,4,1,[$row],$save['revision']);
+      $check(!is_wp_error($again), 'own previous calendar excluded');
+      $overrides = get_option('matinf_calendar_overrides');
+      $exam = array_merge($row,['date'=>'2027-06-07','period'=>'Test']);
+      $otherExam = array_merge($other,['date'=>'2027-06-07','period'=>'Test']);
+      $graduateKey = matinf_calendar_key('graduate',$b,4,1);
+      $overrides[$graduateKey]=[$otherExam]; update_option('matinf_calendar_overrides',$overrides,false);
+      $check(is_wp_error(matinf_calendar_resource_conflict('exams',$a,4,1,[$exam])), 'regular versus graduate conflict');
+      $check(matinf_calendar_resource_conflict('exams',$a,4,1,[array_merge($exam,['date'=>'2027-06-08'])])===null, 'different exam dates allowed');
+      $overrides[$graduateKey]=[]; $overrides[matinf_calendar_key('exams',$b,4,1)]=[$otherExam]; update_option('matinf_calendar_overrides',$overrides,false);
+      $check(is_wp_error(matinf_calendar_resource_conflict('graduate',$a,4,1,[$exam])), 'graduate versus regular conflict');
+      $check(is_wp_error(matinf_calendar_resource_conflict('exams',$a,4,1,[$exam])), 'regular versus regular conflict');
+      $overrides[matinf_calendar_key('exams',$a,4,1)]=[$exam]; update_option('matinf_calendar_overrides',$overrides,false);
+      $check(is_wp_error(matinf_calendar_resource_conflict('graduate',$a,4,1,[$exam])), 'same cohort other exam calendar conflicts');
+      unset($overrides[matinf_calendar_key('exams',$b,4,1)]); update_option('matinf_calendar_overrides',$overrides,false);
+      $generated = matinf_generated_exam_rows($b,4)[0];
+      $check(is_wp_error(matinf_calendar_resource_conflict('exams',$a,4,1,[array_merge($exam,['date'=>$generated['date'],'start'=>'10:00','end'=>'11:00','room'=>'Independent room'])])), 'generated exam teacher and default duration checked');
+      $empty = matinf_calendar_save('classes',$a,4,1,[],matinf_calendar_revision($key));
+      $check(!is_wp_error($empty) && matinf_calendar_classes($a,4,1)===[], 'deleting calendar frees resources');
+      echo wp_json_encode($checks);
+    } finally {
+      update_option('matinf_calendar_overrides',$saved,false); update_option('matinf_schedule',$schedule,false);
+      foreach (array_reverse($created) as $id) wp_delete_post($id,true);
+    }
+  `);
+  assert.equal(result.length, 22, result.join('\n'));
+});
 test('catalog import preserves program IDs, imports exact facts, archives demo records and is idempotent', async () => {
   const result = await php(`
     $before = get_posts(['post_type' => 'mf_program', 'numberposts' => -1, 'fields' => 'ids']);
