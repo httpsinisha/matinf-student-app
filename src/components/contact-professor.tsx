@@ -47,7 +47,7 @@ export function ContactProfessor({ staffId }: { staffId: number }) {
       {!sent && <><Text style={styles.label}>Poruka</Text><TextInput accessibilityLabel="Poruka profesoru" style={[styles.input, styles.message]} value={message} onChangeText={setMessage} editable={editable} multiline maxLength={5000} textAlignVertical="top" /></>}
       {!!requestId && !sent && <><Text style={styles.label}>Kod iz mejla (važi 10 minuta)</Text><TextInput accessibilityLabel="Kod iz mejla" style={styles.input} value={code} onChangeText={setCode} editable={!busy} keyboardType="number-pad" maxLength={6} autoComplete="one-time-code" /></>}
       {!!status && <Text accessibilityLiveRegion="polite" style={styles.note}>{status}</Text>}
-      {busy && <ActivityIndicator color="#2057ce" />}
+      {busy && <ActivityIndicator color="#6955ce" />}
       {!sent && <Pressable accessibilityRole="button" accessibilityState={{ disabled: busy }} disabled={busy} onPress={() => void send()} style={[styles.button, busy && { opacity: 0.5 }]}><Text style={styles.buttonText}>{requestId ? 'Potvrdi i pošalji' : 'Nastavi — pošalji kod'}</Text></Pressable>}
       {!!requestId && !sent && <Pressable accessibilityRole="button" disabled={busy} onPress={() => { setRequestId(''); setCode(''); setStatus(''); }} style={styles.secondary}><Text style={styles.link}>Izmijeni poruku / novi kod</Text></Pressable>}
     </View>}
@@ -57,6 +57,6 @@ const styles = StyleSheet.create({
   container: { marginVertical: 14 }, form: { padding: 16, borderRadius: 16, backgroundColor: '#f2f6fd', marginTop: 12, gap: 8 },
   heading: { fontSize: 21, fontWeight: '700', color: '#16294b' }, note: { fontSize: 14, lineHeight: 21, color: '#425574', marginVertical: 5 },
   label: { color: '#243954', fontWeight: '600', marginTop: 7 }, input: { backgroundColor: 'white', borderWidth: 1, borderColor: '#cbd5e3', borderRadius: 10, padding: 12, fontSize: 16, color: '#16294b' },
-  message: { minHeight: 140 }, button: { backgroundColor: '#2057ce', borderRadius: 12, padding: 15, alignItems: 'center' }, buttonText: { color: 'white', fontWeight: '700', fontSize: 15 },
-  secondary: { padding: 12, alignItems: 'center' }, link: { color: '#2057ce', fontWeight: '600' },
+  message: { minHeight: 140 }, button: { backgroundColor: '#6955ce', borderRadius: 12, padding: 15, alignItems: 'center' }, buttonText: { color: 'white', fontWeight: '700', fontSize: 15 },
+  secondary: { padding: 12, alignItems: 'center' }, link: { color: '#6955ce', fontWeight: '600' },
 });

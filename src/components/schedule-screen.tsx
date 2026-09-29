@@ -6,7 +6,7 @@ import { Preferences, scheduleFollowing } from '@/lib/onboarding-model';
 import { useReminders } from '@/lib/reminders';
 
 type Exam = { id?: string; startsAt?: string; course: Related; courseId: number; year: number; period: string; date: string; start: string; room: string; staff: Related | null };
-type Schedule = { demo: boolean; academicYear: string; note: string; program: Related; year: number; semester: number; exams?: Exam[]; graduateExams?: Exam[]; items: { course: Related; staff: Related | null; courseId: number; day: number; start: string; end: string; room: string; kind: string }[] };
+export type Schedule = { demo: boolean; academicYear: string; note: string; program: Related; year: number; semester: number; exams?: Exam[]; graduateExams?: Exam[]; items: { course: Related; staff: Related | null; courseId: number; day: number; start: string; end: string; room: string; kind: string }[] };
 const days = ['Ponedjeljak', 'Utorak', 'Srijeda', 'Četvrtak', 'Petak'];
 const key = `@matinf/schedule-selection:${siteUrl}`;
 function Choice({ title, selected, onPress }: { title: string; selected: boolean; onPress: () => void }) {
@@ -20,7 +20,7 @@ export function ScheduleScreen({ catalog, preferences, openCourse, initial }: { 
   const [busy, setBusy] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [day, setDay] = useState(0);
+  const [day, setDay] = useState(() => { const day = new Date().getDay(); return day > 0 && day < 6 ? day : 0; });
   const [mode, setMode] = useState<'classes' | 'exams' | 'graduate'>(initial?.scheduleMode || 'classes');
   const [period, setPeriod] = useState('');
   useEffect(() => {
@@ -67,13 +67,14 @@ export function ScheduleScreen({ catalog, preferences, openCourse, initial }: { 
   const activePeriod = periods.includes(period) ? period : exams.find(exam => exam.id === initial?.examId)?.period || periods[0];
   return <ScrollView contentContainerStyle={s.page} refreshControl={<RefreshControl refreshing={resource.loading} onRefresh={() => void resource.refresh()} />}>
     <Text style={s.eyebrow}>ORGANIZUJTE SVOJU SEDMICU</Text><Text style={s.title}>Moj raspored</Text>
-    <Text style={s.description}>2026/2027 · Raspored se otvara prema prvom programu i godini koje pratite. Ovdje možete privremeno pregledati i drugi raspored.</Text>
+    <Text style={s.description}>Vaši časovi, ispiti i podsjetnici na jednom mjestu.</Text>
     <View style={s.row}>{([['classes', 'Nastava'], ['exams', 'Ispiti'], ['graduate', 'Apsolventi']] as const).map(([value, title]) => <Choice key={value} title={title} selected={mode === value} onPress={() => { setMode(value); setPeriod(''); }} />)}</View>
-    <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setExpanded(value => !value)} style={s.selector}><Text style={s.small}>Studijski program</Text><Text style={s.bold}>{program?.title || 'Izaberite program'} {expanded ? '−' : '+'}</Text></Pressable>
-    {expanded && programs.map(item => <Choice key={item.id} title={item.title} selected={item.id === selection.programId} onPress={() => { setSelection(value => ({ ...value, programId: item.id, year: 1 })); setExpanded(false); }} />)}
+    <Pressable accessibilityRole="button" accessibilityState={{ expanded }} onPress={() => setExpanded(value => !value)} style={s.selector}><Text style={s.small}>STUDIJSKI IZBOR · {expanded ? 'Zatvori' : 'Promijeni'}</Text><Text style={s.bold}>{program?.title || 'Izaberite program'}</Text><Text style={s.small}>{mode === 'graduate' ? 'Predmeti 4. godine' : `${selection.year}. godina · ${selection.semester === 1 ? 'Zimski' : 'Ljetni'} semestar`} · {data?.academicYear || '2026/2027'}</Text></Pressable>
+    {expanded && <View style={s.selectionPanel}><Text style={s.small}>Privremeni pregled drugog rasporeda. Praćenje ostaje sačuvano.</Text>{programs.map(item => <Choice key={item.id} title={item.title} selected={item.id === selection.programId} onPress={() => { setSelection(value => ({ ...value, programId: item.id, year: 1 })); }} />)}
     {mode !== 'graduate' && <View style={s.row}>{Array.from({ length: program?.meta.durationYears || 0 }, (_, index) => index + 1).map(year => <Choice key={year} title={`${year}. godina`} selected={selection.year === year} onPress={() => setSelection(value => ({ ...value, year }))} />)}</View>}
-    {mode === 'classes' && <><View style={s.row}>{['Zimski semestar', 'Ljetni semestar'].map((title, i) => <Choice key={title} title={title} selected={selection.semester === i + 1} onPress={() => setSelection(value => ({ ...value, semester: i + 1 }))} />)}</View>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.row}>{['Sedmica', ...days].map((name, i) => <Choice key={name} title={name} selected={day === i} onPress={() => setDay(i)} />)}</ScrollView></>}
+    {mode === 'classes' && <View style={s.row}>{['Zimski semestar', 'Ljetni semestar'].map((title, i) => <Choice key={title} title={title} selected={selection.semester === i + 1} onPress={() => setSelection(value => ({ ...value, semester: i + 1 }))} />)}</View>}
+    <Pressable accessibilityRole="button" onPress={() => setExpanded(false)} style={s.done}><Text style={{ color: 'white', fontWeight: '700' }}>Prikaži raspored</Text></Pressable></View>}
+    {mode === 'classes' && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.row}>{['Sve', 'Pon', 'Uto', 'Sri', 'Čet', 'Pet'].map((name, i) => <Choice key={name} title={name} selected={day === i} onPress={() => setDay(i)} />)}</ScrollView>}
     {mode === 'graduate' && <View style={s.notice}><Text style={s.bold}>Apsolventski rokovi · predmeti četvrte godine</Text><Text style={s.small}>Za studente koji su odslušali svu nastavu. Prikazani su samo objavljeni apsolventski termini.</Text></View>}
     {mode !== 'classes' && <><View style={s.row}>{periods.map(value => <Choice key={value} title={value} selected={activePeriod === value} onPress={() => setPeriod(value)} />)}</View>{exams.filter(exam => exam.period === activePeriod).map(exam => {
       const record = reminders.records.find(row => row.key === `${selection.programId}:${mode === 'graduate' ? 'graduate' : selection.year}:${exam.id}`);
@@ -83,7 +84,7 @@ export function ScheduleScreen({ catalog, preferences, openCourse, initial }: { 
         {Platform.OS === 'android' ? <Pressable accessibilityRole="button" disabled={busy} onPress={() => record ? void changeReminder(exam) : chooseReminder(exam)}><Text style={s.link}>{busy ? 'Čuvanje…' : record ? 'Otkaži podsjetnik' : 'Podsjeti me'}</Text></Pressable> : <Text style={s.small}>Podsjetnici su dostupni u Android aplikaciji.</Text>}
       </View>;
     })}{data && !exams.length && <Text style={s.small}>Ispitni termini još nisu dostupni. Osvježite raspored nakon ažuriranja sajta.</Text>}</>}
-    {resource.loading && !data && <ActivityIndicator color="#2057ce" />}
+    {resource.loading && !data && <ActivityIndicator color="#6955ce" />}
     {resource.error && <View style={s.notice}><Text style={s.bold}>{data ? 'Sačuvan raspored — provjerite da li je ažuran.' : resource.missing ? 'Raspored još nije dostupan na sajtu.' : resource.error}</Text><Pressable accessibilityRole="button" onPress={() => void resource.refresh()}><Text style={s.link}>Pokušaj ponovo</Text></Pressable></View>}
     {data && mode === 'classes' && days.map((name, i) => {
       if (day && day !== i + 1) return null;
@@ -96,11 +97,12 @@ export function ScheduleScreen({ catalog, preferences, openCourse, initial }: { 
   </ScrollView>;
 }
 const s = StyleSheet.create({
-  page: { padding: 22, paddingBottom: 40 }, eyebrow: { color: '#2057ce', fontSize: 11, fontWeight: '700', letterSpacing: 1.5 },
-  title: { fontSize: 32, fontWeight: '800', color: '#13264c', marginVertical: 12 }, description: { fontSize: 15, color: '#62718a', lineHeight: 23, marginBottom: 16 },
+  selectionPanel: { backgroundColor: 'white', padding: 15, borderRadius: 20, marginBottom: 12 }, done: { backgroundColor: '#7057d9', padding: 14, borderRadius: 16, alignItems: 'center', marginTop: 10 },
+  page: { padding: 20, paddingBottom: 35, backgroundColor: '#f6f6fa', minHeight: '100%' }, eyebrow: { color: '#6955ce', fontSize: 11, fontWeight: '700', letterSpacing: 1.5 },
+  title: { fontSize: 29, fontWeight: '800', color: '#13264c', marginVertical: 12 }, description: { fontSize: 13, color: '#62718a', lineHeight: 23, marginBottom: 16 },
   notice: { backgroundColor: '#fff5dc', padding: 15, borderRadius: 15, gap: 6, marginBottom: 16 }, bold: { color: '#172b50', fontSize: 16, fontWeight: '600', lineHeight: 23 }, small: { color: '#64748b', fontSize: 13, lineHeight: 20 },
-  selector: { padding: 16, backgroundColor: '#f0f5ff', borderRadius: 14, gap: 6 }, row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 8 },
-  chip: { borderWidth: 1, borderColor: '#dce5f2', padding: 11, borderRadius: 12, marginVertical: 3 }, selected: { backgroundColor: '#2057ce', borderColor: '#2057ce' }, chipText: { color: '#334b70', fontSize: 14 },
-  day: { fontSize: 21, color: '#172b50', fontWeight: '700', marginTop: 18, marginBottom: 10 }, event: { flexDirection: 'row', gap: 14, padding: 15, borderWidth: 1, borderColor: '#e1e8f2', borderRadius: 16, marginBottom: 10 },
-  time: { width: 48 }, timeText: { color: '#2057ce', fontSize: 16, fontWeight: '700' }, kind: { color: '#2057ce', fontSize: 12, marginBottom: 4 }, link: { color: '#2057ce', paddingVertical: 12 },
+  selector: { padding: 17, backgroundColor: '#efebfb', borderRadius: 21, gap: 5, marginVertical: 12 }, row: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginVertical: 8 },
+  chip: { backgroundColor: 'white', paddingHorizontal: 14, paddingVertical: 12, borderRadius: 23, marginVertical: 3, minHeight: 44 }, selected: { backgroundColor: '#6955ce', borderColor: '#6955ce' }, chipText: { color: '#334b70', fontSize: 14 },
+  day: { fontSize: 21, color: '#172b50', fontWeight: '700', marginTop: 18, marginBottom: 10 }, event: { backgroundColor: 'white', flexDirection: 'row', gap: 14, padding: 18, borderWidth: 1, borderColor: '#eeedf5', borderRadius: 22, marginBottom: 10 },
+  time: { width: 60, borderRightWidth: 2, borderColor: '#e8e1fb', paddingRight: 10 }, timeText: { color: '#6955ce', fontSize: 16, fontWeight: '700' }, kind: { color: '#6955ce', fontSize: 12, marginBottom: 4 }, link: { color: '#6955ce', paddingVertical: 12 },
 });

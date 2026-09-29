@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const colors = { navy: "#061344", blue: "#1054d8", body: "#4d5b78", pale: "#ecf2ff" };
+const colors = { navy: "#26334b", blue: "#6955ce", body: "#4d5b78", pale: "#efebfb" };
 
 // Clip only the original illustration/logo from the supplied design, preserving
 // their pixels until standalone brand assets are available. All UI is native.
@@ -111,9 +111,9 @@ const styles = StyleSheet.create({
   primary: { backgroundColor: colors.blue, alignItems: "center", justifyContent: "center", paddingHorizontal: 20, paddingVertical: 10 },
   primaryText: { color: "#ffffff", fontSize: 18, fontWeight: "500", includeFontPadding: false },
   skip: { alignItems: "center", justifyContent: "center", paddingVertical: 8 },
-  skipText: { color: "#0051df", includeFontPadding: false },
+  skipText: { color: "#6955ce", includeFontPadding: false },
   pressed: { opacity: 0.75 },
-  scrim: { flex: 1, backgroundColor: "#06134466", justifyContent: "center", alignItems: "center", padding: 28 },
+  scrim: { flex: 1, backgroundColor: "#26334b66", justifyContent: "center", alignItems: "center", padding: 28 },
   dialog: { backgroundColor: "#fff", borderRadius: 24, padding: 24, maxWidth: 420, width: "100%" },
   dialogTitle: { color: colors.navy, fontSize: 24, fontWeight: "700" },
   dialogBody: { color: colors.body, fontSize: 17, lineHeight: 25, marginVertical: 20 },

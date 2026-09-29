@@ -112,12 +112,12 @@ export function OnboardingFlow({ programs, courses, onDone, onCancel, editMode =
     }
   }
 
-  if (loading) return <SafeAreaView style={styles.loading}><ActivityIndicator color="#1054d8" accessibilityLabel="Učitavanje podešavanja" /></SafeAreaView>;
+  if (loading) return <SafeAreaView style={styles.loading}><ActivityIndicator color="#6955ce" accessibilityLabel="Učitavanje podešavanja" /></SafeAreaView>;
 
   if (step === 0 && (!saved || editing)) return <View style={{ flex: 1 }}>
     <OnboardingScreen onContinue={() => { setError(null); setStep(1); }} onSkip={() => void finish(false, true)} />
     {error && <View style={styles.banner}><Text accessibilityRole="alert" style={styles.error}>{error}</Text></View>}
-    {busy && <View style={styles.busyOverlay}><ActivityIndicator color="#1054d8" /></View>}
+    {busy && <View style={styles.busyOverlay}><ActivityIndicator color="#6955ce" /></View>}
   </View>;
 
   const complete = !!saved && !editing;
@@ -258,39 +258,39 @@ const styles = StyleSheet.create({
   loading: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: "white" },
   page: { padding: 24, paddingTop: 30, width: "100%", maxWidth: 540, alignSelf: "center", flexGrow: 1 },
   topbar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 20 },
-  wordmark: { color: "#061344", fontWeight: "800", fontSize: 26 },
-  badge: { color: "#4d5b78", backgroundColor: "#ecf2ff", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 8 },
+  wordmark: { color: "#26334b", fontWeight: "800", fontSize: 26 },
+  badge: { color: "#4d5b78", backgroundColor: "#efebfb", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 8 },
   back: { alignSelf: "flex-start", minHeight: 44, justifyContent: "center", marginBottom: 12 },
-  link: { color: "#1054d8", fontSize: 17, fontWeight: "500" },
-  eyebrow: { color: "#1054d8", fontSize: 12, fontWeight: "700", letterSpacing: 2, marginBottom: 10 },
-  title: { color: "#061344", fontSize: 38, lineHeight: 44, fontWeight: "700", letterSpacing: -1 },
+  link: { color: "#6955ce", fontSize: 17, fontWeight: "500" },
+  eyebrow: { color: "#6955ce", fontSize: 12, fontWeight: "700", letterSpacing: 2, marginBottom: 10 },
+  title: { color: "#26334b", fontSize: 38, lineHeight: 44, fontWeight: "700", letterSpacing: -1 },
   description: { color: "#4d5b78", fontSize: 18, lineHeight: 27, marginTop: 14, marginBottom: 24 },
-  section: { color: "#061344", fontWeight: "700", fontSize: 20, marginTop: 14, marginBottom: 8 },
+  section: { color: "#26334b", fontWeight: "700", fontSize: 20, marginTop: 14, marginBottom: 8 },
   hint: { color: "#64708a", fontSize: 13, lineHeight: 20, marginBottom: 6 },
   program: { flexDirection: "row", alignItems: "center", gap: 12, borderWidth: 1, borderColor: "#dfe6f1", padding: 14, borderRadius: 16, marginVertical: 5, minHeight: 64 },
-  selected: { borderColor: "#1054d8", backgroundColor: "#edf4ff" },
+  selected: { borderColor: "#6955ce", backgroundColor: "#edf4ff" },
   programName: { color: "#172951", fontSize: 16, lineHeight: 22, fontWeight: "500" },
   programCard: { borderWidth: 1, borderColor: '#dfe6f1', borderRadius: 16, marginVertical: 6, overflow: 'hidden' },
-  followedCard: { borderColor: '#1054d8' },
-  programHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, backgroundColor: '#f8faff', minHeight: 80 },
+  followedCard: { borderColor: '#6955ce' },
+  programHeader: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, backgroundColor: '#f6f6fa', minHeight: 80 },
   programBody: { padding: 14, borderTopWidth: 1, borderTopColor: '#dfe6f1' },
-  followedText: { color: '#1054d8', marginTop: 6 },
+  followedText: { color: '#6955ce', marginTop: 6 },
   summaryProgram: { borderTopWidth: 1, borderTopColor: '#dfe6f1', paddingTop: 12, marginTop: 8 },
   years: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginVertical: 8 },
   year: { borderWidth: 1, borderColor: "#dfe6f1", padding: 12, borderRadius: 12, minHeight: 48 },
-  check: { fontSize: 24, color: "#1054d8" },
+  check: { fontSize: 24, color: "#6955ce" },
   selectionSummary: { color: "#4d5b78", fontSize: 14, textAlign: "center", marginVertical: 20 },
-  button: { backgroundColor: "#1054d8", borderRadius: 14, minHeight: 56, padding: 14, alignItems: "center", justifyContent: "center", marginTop: 10 },
+  button: { backgroundColor: "#6955ce", borderRadius: 14, minHeight: 56, padding: 14, alignItems: "center", justifyContent: "center", marginTop: 10 },
   buttonText: { color: "white", fontSize: 18, fontWeight: "500", textAlign: "center" },
   secondary: { backgroundColor: "transparent" },
-  secondaryText: { color: "#1054d8" },
-  card: { backgroundColor: "#f3f7ff", borderRadius: 20, padding: 22, marginBottom: 18 },
-  cardTitle: { color: "#061344", fontSize: 20, fontWeight: "700", marginBottom: 8 },
+  secondaryText: { color: "#6955ce" },
+  card: { backgroundColor: "#f2effa", borderRadius: 20, padding: 22, marginBottom: 18 },
+  cardTitle: { color: "#26334b", fontSize: 20, fontWeight: "700", marginBottom: 8 },
   cardText: { color: "#4d5b78", fontSize: 16, lineHeight: 25, marginBottom: 8 },
   edit: { minHeight: 44, justifyContent: "center", marginTop: 4 },
   dots: { flexDirection: "row", gap: 12, justifyContent: "center", marginVertical: 24 },
   dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "#ced7e7" },
-  activeDot: { backgroundColor: "#1054d8" },
+  activeDot: { backgroundColor: "#6955ce" },
   demo: { color: "#64708a", textAlign: "center", fontSize: 12, marginTop: 30 },
   error: { color: "#ac2538", fontSize: 15, textAlign: "center", padding: 12 },
   banner: { position: "absolute", top: 30, left: 16, right: 16, backgroundColor: "#fff2f3", borderRadius: 12 },

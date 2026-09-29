@@ -16,4 +16,4 @@ export function RemindersScreen({ openSchedule }: { openSchedule: (value: { prog
     </View>)}
   </ScrollView>;
 }
-const s = StyleSheet.create({ page: { padding: 22, backgroundColor: '#f7f9fd', minHeight: '100%' }, title: { fontSize: 28, fontWeight: '800', color: '#13264c' }, description: { color: '#62718a', lineHeight: 22, marginVertical: 8 }, card: { backgroundColor: 'white', padding: 18, borderRadius: 16, marginTop: 16 }, name: { color: '#172b50', fontSize: 17, fontWeight: '700' }, action: { color: '#2057ce', paddingVertical: 13, fontWeight: '600' } });
+const s = StyleSheet.create({ page: { padding: 22, backgroundColor: '#f6f6fa', minHeight: '100%' }, title: { fontSize: 28, fontWeight: '800', color: '#13264c' }, description: { color: '#62718a', lineHeight: 22, marginVertical: 8 }, card: { backgroundColor: 'white', padding: 18, borderRadius: 16, marginTop: 16 }, name: { color: '#172b50', fontSize: 17, fontWeight: '700' }, action: { color: '#6955ce', paddingVertical: 13, fontWeight: '600' } });
