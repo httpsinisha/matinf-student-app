@@ -1,5 +1,6 @@
 <?php
 defined('ABSPATH') || exit;
+require_once __DIR__ . '/inner-pages.php';
 add_action('after_setup_theme', function () {
     add_theme_support('title-tag');
     add_theme_support('post-thumbnails');
@@ -8,7 +9,9 @@ add_action('after_setup_theme', function () {
 });
 add_action('wp_enqueue_scripts', function () {
     wp_enqueue_style('matinf', get_stylesheet_uri(), [], wp_get_theme()->get('Version'));
-    wp_enqueue_script('matinf-navigation', get_template_directory_uri() . '/navigation.js', [], '0.1.0', true);
+    wp_enqueue_style('matinf-college', get_template_directory_uri() . '/college.css', ['matinf'], wp_get_theme()->get('Version'));
+    if (!is_front_page()) wp_enqueue_style('matinf-inner', get_template_directory_uri() . '/inner-pages.css', ['matinf-college'], wp_get_theme()->get('Version'));
+    wp_enqueue_script('matinf-navigation', get_template_directory_uri() . '/navigation.js', [], wp_get_theme()->get('Version'), true);
 });
 
 function matinf_theme_navigation() {
@@ -27,7 +30,11 @@ function matinf_theme_navigation() {
     $schedule = get_page_by_path('raspored');
     if ($schedule && $schedule->post_status === 'publish') $links[get_permalink($schedule)] = 'Raspored';
     if ($contact && $contact->post_status === 'publish') $links[get_permalink($contact)] = 'Kontakt';
-    foreach ($links as $url => $label) echo '<a href="' . esc_url($url) . '">' . esc_html($label) . '</a>';
+    $primary = ['Početna','Obavještenja','Studije','Raspored','Osoblje'];
+    foreach ($primary as $label) foreach ($links as $url=>$name) if ($label===$name) echo '<a href="' . esc_url($url) . '"' . (untrailingslashit($url) === untrailingslashit(home_url(add_query_arg([], $GLOBALS['wp']->request))) ? ' aria-current="page"' : '') . '>' . esc_html($name) . '</a>';
+    echo '<details class="nav-more"><summary>Više <span aria-hidden="true">⌄</span></summary><div class="nav-dropdown">';
+    foreach ($links as $url=>$label) if (!in_array($label,$primary,true)) echo '<a href="' . esc_url($url) . '">' . esc_html($label) . '</a>';
+    echo '</div></details>';
 }
 
 function matinf_theme_card($post) {
