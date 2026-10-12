@@ -27,5 +27,5 @@ if (action === 'tap') {
 else if (action === 'scroll') { run('shell', 'input', 'swipe', '550', '1800', '550', '650', '500'); await pause(700); }
 const { all, xml } = await nodes();
 writeFileSync(resolve(output, value + '.xml'), xml);
-writeFileSync(resolve(output, value + '.png'), execFileSync(adb, ['-s', 'emulator-5554', 'exec-out', 'screencap', '-p']));
+writeFileSync(resolve(output, value + '.png'), execFileSync(adb, ['-s', 'emulator-5554', 'exec-out', 'screencap', '-p'], { maxBuffer: 12 * 1024 * 1024 }));
 console.log(all.map(n => n['content-desc'] || n.text).filter(Boolean).join('\n'));

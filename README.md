@@ -1,6 +1,6 @@
 ﻿# MATINF
 
-Unofficial academic demonstration: a WordPress website/content API and an Expo SDK 57 Android app. Interface language: Serbian Latin. The project follows [PLAN.md](PLAN.md); current decisions and remaining gates are in [docs/setup-status.md](docs/setup-status.md).
+Unofficial academic demonstration: a WordPress website/content API and an Expo SDK 57 Android app. Interface language: Serbian Latin.
 
 ## Run the local WordPress site
 
@@ -56,6 +56,6 @@ The browser check requires Google Chrome. The WordPress tests use a separate per
 - `wordpress/scripts/`: local runtime, checks, packaging, and backup tools.
 - `design/`: supplied visual references.
 - `artifacts/`: screenshots and local verification outputs.
-- [API contract](docs/api-contract.md), [hosting steps](docs/hosting-setup.md), [current status](docs/setup-status.md).
+- [API contract](docs/api-contract.md), [hosting steps](docs/hosting-setup.md).
 
 All sample staff, announcements, courses, and documents are explicitly demonstration content. No hosting, push-delivery, final-signing, or Redmi compatibility result is claimed until those checks actually pass.

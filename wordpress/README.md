@@ -76,7 +76,7 @@ To restore locally, stop WordPress; preserve the current `.runtime/site` under a
 
 ## What is still pending
 
-Public hosting, HTTPS and outbound Expo-request checks; Expo/Firebase project configuration; private installation registration; notification queue/receipts; and the final Redmi build. See [setup decisions](../docs/setup-status.md) and [hosting steps](../docs/hosting-setup.md). Mobile reading and caching are implemented against the local site; external-service gates remain open.
+Public hosting, HTTPS and outbound Expo-request checks; Expo/Firebase project configuration; private installation registration; notification queue/receipts; and the final Redmi build. See [hosting steps](../docs/hosting-setup.md). Mobile reading and caching are implemented against the local site; external-service gates remain open.
 
 ## Professors and targeted publishing
 

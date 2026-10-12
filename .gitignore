@@ -58,3 +58,11 @@ example
 *service-account*.json
 *firebase-adminsdk*.json
 /artifacts/build/
+
+# Local assistant configuration and working notes
+.claude/
+.codex/
+AGENTS.md
+CLAUDE.md
+/PLAN.md
+/docs/setup-status.md
